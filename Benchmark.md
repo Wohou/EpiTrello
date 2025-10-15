@@ -30,6 +30,8 @@ This stack represents a more traditional architecture where the frontend and bac
 
 **Key Advantage:** By choosing this stack we chose to have the ability to design and integrate a complete web architecture by connecting the frontend and backend from scratch, a key aspect of mastering full-stack development principles.
 
+**See the [README Stack 2](./Benchmark/stack2-mern/README.md)** for more informations and how to test it (with docker !).
+
 ---
 
 ## Stack 3: The Python-Powered Alternative
