@@ -1,0 +1,58 @@
+.board-card {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  padding: 20px;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+  position: relative;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+}
+
+.board-card:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.board-card-content {
+  flex: 1;
+}
+
+.board-card h3 {
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.board-card p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.delete-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(0, 0, 0, 0.2);
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+
+.board-card:hover .delete-button {
+  opacity: 1;
+}
+
+.delete-button:hover {
+  background-color: rgba(0, 0, 0, 0.4);
+}
