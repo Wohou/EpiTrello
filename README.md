@@ -21,7 +21,7 @@ The project serves as both a technical challenge and a professional experience, 
 
 ### 1. Complete Documentation
 A full technical documentation describing the project architecture, API endpoints, data models, and setup instructions.
-[Technical Documentation (link to be added)](link-to-be-added)
+[Technical Documentation (WIP)](WIP)
 
 ### 2. Full Dockerization
 The entire application is containerized using Docker to ensure consistent behavior across all environments, from development to production.
@@ -34,4 +34,4 @@ A GitHub Project board is used to organize and track tasks, objectives, and new 
 
 ### 5. Technology Benchmark
 A benchmark document summarizes the different technology stacks tested and evaluated for this project.
-[Benchmark WIP)](WIP)
+[Benchmark WIP](./Benchmark.md)
