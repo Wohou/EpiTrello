@@ -1,6 +1,6 @@
 # EpiTrello - 3 stacks Benchmark
 
-This document outlines three relevant and powerful technology stacks you could use to build a Trello-like application for your school project. Each stack includes a choice for the frontend (the user interface), the backend (the server logic), and the database (where data is stored).
+This document outlines three relevant and powerful technology stacks we could use to build a Trello-like application for our school project. Each stack includes a choice for the frontend (the user interface), the backend (the server logic), and the database (where data is stored).
 
 ---
 
