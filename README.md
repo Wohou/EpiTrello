@@ -21,7 +21,8 @@ The project serves as both a technical challenge and a professional experience, 
 
 ### 1. Complete Documentation
 A full technical documentation describing the project architecture, API endpoints, data models, and setup instructions.
-[Technical Documentation (WIP)](WIP)
+[Technical Documentation (WIP)](WIP)<br>
+For now we will have the [Technical Specifications Document](./SPECIFICATIONS.md) that can be used for features listing, API endpoints or data models.
 
 ### 2. Full Dockerization
 The entire application is containerized using Docker to ensure consistent behavior across all environments, from development to production.
