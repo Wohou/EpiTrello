@@ -1,0 +1,191 @@
+.list-column {
+  background-color: #ebecf0;
+  border-radius: 3px;
+  padding: 12px;
+  min-width: 280px;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 180px);
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.list-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #172b4d;
+  flex: 1;
+}
+
+.editable-list-title {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.editable-list-title:hover {
+  background-color: rgba(9, 30, 66, 0.08);
+}
+
+.edit-list-title-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.edit-list-title-input {
+  background-color: white;
+  color: #172b4d;
+  border: 2px solid #4CAF50;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 150px;
+  width: auto;
+  outline: none;
+}
+
+.validate-button-small,
+.cancel-button-small {
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.2s;
+  min-width: 28px;
+  flex-shrink: 0;
+}
+
+.validate-button-small {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.validate-button-small:hover {
+  background-color: #45a049;
+  transform: scale(1.05);
+}
+
+.cancel-button-small {
+  background-color: #f44336;
+  color: white;
+}
+
+.cancel-button-small:hover {
+  background-color: #da190b;
+  transform: scale(1.05);
+}
+
+.delete-list-button {
+  background: transparent;
+  color: #5e6c84;
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.delete-list-button:hover {
+  background-color: rgba(9, 30, 66, 0.08);
+}
+
+.cards-container {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.add-card-form {
+  background-color: white;
+  border-radius: 3px;
+  padding: 8px;
+  box-shadow: 0 1px 0 rgba(9, 30, 66, 0.13);
+}
+
+.add-card-form input,
+.add-card-form textarea {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 8px;
+  border: 2px solid #dfe1e6;
+  border-radius: 3px;
+  font-size: 14px;
+}
+
+.add-card-form input:focus,
+.add-card-form textarea:focus {
+  border-color: #0079bf;
+}
+
+.add-card-form textarea {
+  resize: vertical;
+  min-height: 54px;
+}
+
+.add-card-form .form-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.add-card-form .add-button,
+.add-card-form .cancel-button {
+  padding: 8px 12px;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.add-card-form .add-button {
+  background-color: #0079bf;
+  color: white;
+}
+
+.add-card-form .add-button:hover {
+  background-color: #026aa7;
+}
+
+.add-card-form .cancel-button {
+  background-color: transparent;
+  color: #5e6c84;
+  min-width: 70px;
+}
+
+.add-card-form .cancel-button:hover {
+  background-color: rgba(9, 30, 66, 0.08);
+}
+
+.add-card-button {
+  width: 100%;
+  text-align: left;
+  padding: 8px;
+  background: transparent;
+  color: #5e6c84;
+  font-size: 14px;
+  border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.add-card-button:hover {
+  background-color: rgba(9, 30, 66, 0.08);
+}

@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { supabaseBrowser } from '@/lib/supabase-browser'
 import CreateBoardModal from '@/components/CreateBoardModal'
 import BoardCard from '@/components/BoardCard'
+import ProfileMenu from '@/components/ProfileMenu'
 import type { Board } from '@/lib/supabase'
 import './BoardList.css'
 
@@ -13,6 +14,8 @@ export default function BoardList() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [username, setUsername] = useState<string>('')
+  const [userEmail, setUserEmail] = useState<string>('')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -21,9 +24,12 @@ export default function BoardList() {
   }, [])
 
   const fetchUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user } } = await supabaseBrowser.auth.getUser()
     if (user) {
-      setUsername(user.user_metadata?.username || user.email || 'User')
+      const displayName = (user.user_metadata?.username || user.email || 'User').trim()
+      setUsername(displayName)
+      setUserEmail(user.email || '')
+      setAvatarUrl(user.user_metadata?.avatar_url || null)
     }
   }
 
@@ -37,11 +43,6 @@ export default function BoardList() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/auth')
   }
 
   const handleCreateBoard = async (title: string, description: string) => {
@@ -87,9 +88,7 @@ export default function BoardList() {
           <button className="create-button" onClick={() => setIsModalOpen(true)}>
             Create New Board
           </button>
-          <button className="logout-button" onClick={handleLogout}>
-            Logout
-          </button>
+          <ProfileMenu username={username} userEmail={userEmail} avatarUrl={avatarUrl} />
         </div>
       </div>
 

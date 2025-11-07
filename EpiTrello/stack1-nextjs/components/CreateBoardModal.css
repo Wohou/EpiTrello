@@ -1,0 +1,100 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 8px;
+  padding: 24px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content h2 {
+  margin-bottom: 20px;
+  font-size: 20px;
+  color: #172b4d;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #5e6c84;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 2px solid #dfe1e6;
+  border-radius: 3px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: #0079bf;
+}
+
+.form-group textarea {
+  resize: vertical;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.modal-actions .cancel-button,
+.modal-actions .create-button {
+  padding: 8px 16px;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.modal-actions .cancel-button {
+  background-color: #f4f5f7;
+  color: #172b4d;
+}
+
+.modal-actions .cancel-button:hover {
+  background-color: #e4e6ea;
+}
+
+.modal-actions .create-button {
+  background-color: #0079bf;
+  color: white;
+  min-width: 70px;
+}
+
+.modal-actions .create-button:hover:not(:disabled) {
+  background-color: #026aa7;
+}
+
+.modal-actions .create-button:disabled {
+  background-color: #dfe1e6;
+  color: #a5adba;
+  cursor: not-allowed;
+  opacity: 1;
+}

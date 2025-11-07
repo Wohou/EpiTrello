@@ -1,0 +1,74 @@
+.create-list-button {
+  min-width: 280px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  padding: 12px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  transition: background-color 0.2s;
+  height: fit-content;
+}
+
+.create-list-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.create-list-form {
+  min-width: 280px;
+  background-color: #ebecf0;
+  border-radius: 3px;
+  padding: 8px;
+}
+
+.create-list-form input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 8px;
+  border: 2px solid #0079bf;
+  border-radius: 3px;
+  font-size: 14px;
+}
+
+.create-list-form .form-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.create-list-form .add-button,
+.create-list-form .cancel-button {
+  padding: 8px 12px;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.create-list-form .add-button {
+  background-color: #0079bf;
+  color: white;
+}
+
+.create-list-form .add-button:hover {
+  background-color: #026aa7;
+}
+
+.create-list-form .cancel-button {
+  background: transparent;
+  color: #5e6c84;
+  font-size: 24px;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+
+.create-list-form .cancel-button:hover {
+  background-color: rgba(9, 30, 66, 0.08);
+}

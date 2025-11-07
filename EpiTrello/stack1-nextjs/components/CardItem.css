@@ -1,0 +1,117 @@
+.card-item {
+  background-color: white;
+  border-radius: 3px;
+  padding: 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 0 rgba(9, 30, 66, 0.13);
+  cursor: pointer;
+  position: relative;
+  transition: box-shadow 0.2s;
+}
+
+.card-item:hover {
+  box-shadow: 0 2px 4px rgba(9, 30, 66, 0.25);
+}
+
+.card-item.editing {
+  cursor: default;
+}
+
+.card-content {
+  padding-right: 20px;
+}
+
+.card-title {
+  font-size: 14px;
+  color: #172b4d;
+  word-wrap: break-word;
+  margin-bottom: 4px;
+}
+
+.card-description {
+  font-size: 12px;
+  color: #5e6c84;
+  word-wrap: break-word;
+  margin-top: 4px;
+}
+
+.delete-card-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background-color: rgba(9, 30, 66, 0.08);
+  color: #5e6c84;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s, background-color 0.2s;
+}
+
+.card-item:hover .delete-card-button {
+  opacity: 1;
+}
+
+.delete-card-button:hover {
+  background-color: rgba(9, 30, 66, 0.15);
+}
+
+.card-item.editing input,
+.card-item.editing textarea {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 8px;
+  border: 2px solid #dfe1e6;
+  border-radius: 3px;
+  font-size: 14px;
+}
+
+.card-item.editing input:focus,
+.card-item.editing textarea:focus {
+  border-color: #0079bf;
+}
+
+.card-item.editing textarea {
+  resize: vertical;
+  min-height: 54px;
+}
+
+.card-item .card-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.card-item .card-actions .save-button,
+.card-item .card-actions .cancel-button {
+  padding: 8px 12px;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.card-item .card-actions .save-button {
+  background-color: #0079bf;
+  color: white;
+}
+
+.card-item .card-actions .save-button:hover {
+  background-color: #026aa7;
+}
+
+.card-item .card-actions .cancel-button {
+  background-color: #f4f5f7;
+  color: #172b4d;
+  min-width: 70px;
+}
+
+.card-item .card-actions .cancel-button:hover {
+  background-color: #e4e6ea;
+}
