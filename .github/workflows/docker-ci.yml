@@ -9,6 +9,9 @@ on:
 jobs:
   docker-build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./EpiTrello/stack1-nextjs
 
     steps:
       - name: Checkout code
