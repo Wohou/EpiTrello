@@ -66,6 +66,9 @@ export interface Card {
   description: string | null
   position: number
   list_id: string
+  cover_color: string | null
+  cover_image: string | null
+  is_completed: boolean
   created_at: string
   updated_at: string
 }

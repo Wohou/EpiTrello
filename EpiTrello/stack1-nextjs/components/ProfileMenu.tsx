@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase-browser'
+import { useLanguage } from '@/lib/language-context'
 import './ProfileMenu.css'
 
 interface ProfileMenuProps {
@@ -16,6 +17,7 @@ export default function ProfileMenu({ username, userEmail, avatarUrl }: ProfileM
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const { t } = useLanguage()
 
   // Get the first letter for avatar, handling empty/whitespace cases
   const getAvatarLetter = (name: string) => {
@@ -86,7 +88,7 @@ export default function ProfileMenu({ username, userEmail, avatarUrl }: ProfileM
             onClick={handleProfileSettings}
           >
             <span className="item-icon">⚙️</span>
-            Paramètres de compte
+            {t.common.settings}
           </button>
 
           <button
@@ -94,24 +96,24 @@ export default function ProfileMenu({ username, userEmail, avatarUrl }: ProfileM
             onClick={() => setShowLogoutConfirm(true)}
           >
             <span className="item-icon">🚪</span>
-            Déconnexion
+            {t.common.logout}
           </button>
 
           {showLogoutConfirm && (
             <div className="logout-confirm">
-              <p>Êtes-vous sûr de vouloir vous déconnecter ?</p>
+              <p>{t.common.logoutConfirm}</p>
               <div className="confirm-buttons">
                 <button
                   className="confirm-yes"
                   onClick={handleLogout}
                 >
-                  Oui, déconnecter
+                  {t.common.logoutYes}
                 </button>
                 <button
                   className="confirm-no"
                   onClick={() => setShowLogoutConfirm(false)}
                 >
-                  Annuler
+                  {t.common.cancel}
                 </button>
               </div>
             </div>

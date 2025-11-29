@@ -14,6 +14,11 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+  cursor: grab;
+}
+
+.list-header:active {
+  cursor: grabbing;
 }
 
 .list-header h3 {
@@ -110,6 +115,20 @@
   flex: 1;
   overflow-y: auto;
   margin-bottom: 8px;
+  min-height: 20px;
+  transition: background-color 0.2s;
+  border-radius: 3px;
+  padding: 2px;
+}
+
+.cards-container.dragging-over {
+  background-color: rgba(0, 121, 191, 0.1);
+}
+
+/* Card dragging styles */
+.card-dragging {
+  opacity: 0.9;
+  transform: rotate(2deg);
 }
 
 .add-card-form {

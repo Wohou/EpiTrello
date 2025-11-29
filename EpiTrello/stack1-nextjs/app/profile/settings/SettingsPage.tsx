@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { themes, type ThemeKey } from '@/lib/themes'
 import { useTheme } from '@/lib/theme-context'
+import { useLanguage, type Language } from '@/lib/language-context'
 import './SettingsPage.css'
 
 export default function SettingsPage() {
@@ -12,6 +13,7 @@ export default function SettingsPage() {
   const [email, setEmail] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const { currentTheme, setTheme } = useTheme()
+  const { language, setLanguage, t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -52,7 +54,7 @@ export default function SettingsPage() {
     const trimmedUsername = username.trim()
 
     if (!trimmedUsername) {
-      setMessage({ type: 'error', text: 'Le nom d\'utilisateur ne peut pas être vide' })
+      setMessage({ type: 'error', text: t.settings.usernameRequired })
       setSaving(false)
       return
     }
@@ -70,10 +72,10 @@ export default function SettingsPage() {
 
       // Update local state with trimmed username
       setUsername(trimmedUsername)
-      setMessage({ type: 'success', text: 'Profil mis à jour avec succès !' })
+      setMessage({ type: 'success', text: t.settings.profileUpdated })
     } catch (error: any) {
       console.error('Error updating profile:', error)
-      setMessage({ type: 'error', text: error.message || 'Erreur lors de la mise à jour' })
+      setMessage({ type: 'error', text: error.message || t.settings.updateError })
     } finally {
       setSaving(false)
     }
@@ -92,18 +94,18 @@ export default function SettingsPage() {
 
       // Validate file type
       if (!file.type.startsWith('image/')) {
-        setMessage({ type: 'error', text: 'Veuillez sélectionner une image' })
+        setMessage({ type: 'error', text: t.settings.selectImage })
         return
       }
 
       // Validate file size (max 2MB)
       if (file.size > 2 * 1024 * 1024) {
-        setMessage({ type: 'error', text: 'L\'image ne doit pas dépasser 2MB' })
+        setMessage({ type: 'error', text: t.settings.imageSize })
         return
       }
 
       const { data: { user } } = await supabaseBrowser.auth.getUser()
-      if (!user) throw new Error('Non authentifié')
+      if (!user) throw new Error(t.settings.notAuthenticated)
 
       const fileExt = file.name.split('.').pop()
       const fileName = `${user.id}-${Math.random()}.${fileExt}`
@@ -117,7 +119,7 @@ export default function SettingsPage() {
       if (uploadError) {
         console.error('Upload error details:', uploadError)
         if (uploadError.message.includes('Bucket not found')) {
-          throw new Error('Le bucket "avatars" n\'existe pas. Veuillez configurer Supabase Storage (voir supabase/setup-avatars-storage.sql)')
+          throw new Error(t.settings.bucketNotFound)
         }
         throw uploadError
       }
@@ -135,10 +137,10 @@ export default function SettingsPage() {
       if (updateError) throw updateError
 
       setAvatarUrl(publicUrl)
-      setMessage({ type: 'success', text: 'Photo de profil mise à jour !' })
+      setMessage({ type: 'success', text: t.settings.photoUpdated })
     } catch (error: any) {
       console.error('Error uploading avatar:', error)
-      setMessage({ type: 'error', text: error.message || 'Erreur lors de l\'upload' })
+      setMessage({ type: 'error', text: error.message || t.settings.uploadError })
     } finally {
       setUploading(false)
     }
@@ -156,10 +158,10 @@ export default function SettingsPage() {
       if (error) throw error
 
       setAvatarUrl(null)
-      setMessage({ type: 'success', text: 'Photo de profil supprimée' })
+      setMessage({ type: 'success', text: t.settings.photoRemoved })
     } catch (error: any) {
       console.error('Error removing avatar:', error)
-      setMessage({ type: 'error', text: error.message || 'Erreur lors de la suppression' })
+      setMessage({ type: 'error', text: error.message || t.settings.removeError })
     } finally {
       setUploading(false)
     }
@@ -170,22 +172,22 @@ export default function SettingsPage() {
   }
 
   if (loading) {
-    return <div className="settings-loading">Chargement...</div>
+    return <div className="settings-loading">{t.common.loading}</div>
   }
 
   return (
     <div className="settings-container">
       <div className="settings-header">
         <button className="back-button" onClick={handleBack}>
-          ← Retour aux boards
+          ← {t.boards.backToBoards}
         </button>
-        <h1>Paramètres du compte</h1>
+        <h1>{t.settings.accountSettings}</h1>
       </div>
 
       <div className="settings-content">
         <div className="settings-card">
           <div className="profile-section">
-            <h2>Photo de profil</h2>
+            <h2>{t.settings.profilePicture}</h2>
             <div className="avatar-section">
               <div className="current-avatar">
                 {avatarUrl ? (
@@ -197,12 +199,12 @@ export default function SettingsPage() {
               <div className="avatar-info">
                 <p className="info-text">
                   {avatarUrl
-                    ? 'Vous pouvez changer votre photo de profil'
-                    : 'Ajoutez une photo de profil personnalisée'}
+                    ? t.settings.changePhoto
+                    : t.settings.addPhoto}
                 </p>
                 <div className="avatar-buttons">
                   <label className="change-avatar-button" htmlFor="avatar-upload">
-                    {uploading ? 'Chargement...' : avatarUrl ? 'Changer la photo' : 'Ajouter une photo'}
+                    {uploading ? t.settings.uploading : avatarUrl ? t.settings.changePhoto : t.settings.addPhoto}
                   </label>
                   <input
                     id="avatar-upload"
@@ -218,11 +220,11 @@ export default function SettingsPage() {
                       onClick={handleRemoveAvatar}
                       disabled={uploading}
                     >
-                      Supprimer
+                      {t.settings.removePhoto}
                     </button>
                   )}
                 </div>
-                <span className="field-help">Format: JPG, PNG. Max 2MB</span>
+                <span className="field-help">{t.settings.formatHelp}</span>
               </div>
             </div>
           </div>
@@ -230,19 +232,20 @@ export default function SettingsPage() {
           <div className="divider"></div>
 
           <div className="theme-section">
-            <h2>Thème de l'application</h2>
-            <p className="section-description">Personnalisez l'apparence de votre interface</p>
+            <h2>{t.settings.appTheme}</h2>
+            <p className="section-description">{t.settings.customizeAppearance}</p>
 
             <div className="theme-grid">
               {(Object.keys(themes) as ThemeKey[]).map((themeKey) => {
                 const theme = themes[themeKey]
+                const themeName = t.themes[themeKey]
                 return (
                   <div
                     key={themeKey}
                     className={`theme-card ${currentTheme === themeKey ? 'selected' : ''}`}
                     onClick={() => {
                       setTheme(themeKey)
-                      setMessage({ type: 'success', text: `Thème "${theme.name}" appliqué !` })
+                      setMessage({ type: 'success', text: t.settings.themeApplied.replace('{name}', themeName) })
                     }}
                   >
                     <div
@@ -253,7 +256,7 @@ export default function SettingsPage() {
                         <span className="check-icon">✓</span>
                       )}
                     </div>
-                    <span className="theme-name">{theme.name}</span>
+                    <span className="theme-name">{themeName}</span>
                   </div>
                 )
               })}
@@ -262,23 +265,56 @@ export default function SettingsPage() {
 
           <div className="divider"></div>
 
+          <div className="language-section">
+            <h2>{t.settings.language}</h2>
+            <p className="section-description">{t.settings.selectLanguage}</p>
+
+            <div className="language-options">
+              <div
+                className={`language-option ${language === 'fr' ? 'selected' : ''}`}
+                onClick={async () => {
+                  await setLanguage('fr')
+                  setMessage({ type: 'success', text: t.settings.languageChanged })
+                }}
+              >
+                <span className="language-flag">🇫🇷</span>
+                <span className="language-name">{t.settings.french}</span>
+                {language === 'fr' && <span className="check-icon">✓</span>}
+              </div>
+              
+              <div
+                className={`language-option ${language === 'en' ? 'selected' : ''}`}
+                onClick={async () => {
+                  await setLanguage('en')
+                  setMessage({ type: 'success', text: t.settings.languageChanged })
+                }}
+              >
+                <span className="language-flag">🇬🇧</span>
+                <span className="language-name">{t.settings.english}</span>
+                {language === 'en' && <span className="check-icon">✓</span>}
+              </div>
+            </div>
+          </div>
+
+          <div className="divider"></div>
+
           <div className="info-section">
-            <h2>Informations personnelles</h2>
+            <h2>{t.settings.personalInfo}</h2>
 
             <div className="form-group">
-              <label htmlFor="username">Nom d'utilisateur</label>
+              <label htmlFor="username">{t.settings.username}</label>
               <input
                 id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Entrez votre nom d'utilisateur"
+                placeholder={t.settings.usernamePlaceholder}
               />
-              <span className="field-help">Ce nom sera affiché dans vos boards</span>
+              <span className="field-help">{t.settings.usernameHelp}</span>
             </div>
 
             <div className="form-group">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">{t.settings.email}</label>
               <input
                 id="email"
                 type="email"
@@ -286,7 +322,7 @@ export default function SettingsPage() {
                 disabled
                 className="disabled-input"
               />
-              <span className="field-help">L'email ne peut pas être modifié</span>
+              <span className="field-help">{t.settings.emailHelp}</span>
             </div>
           </div>
 
@@ -302,7 +338,7 @@ export default function SettingsPage() {
               onClick={handleSave}
               disabled={saving}
             >
-              {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
+              {saving ? t.settings.saving : t.settings.saveChanges}
             </button>
           </div>
         </div>

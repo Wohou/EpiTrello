@@ -55,7 +55,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { title, description, position, list_id } = body
+    const { title, description, position, list_id, cover_color, cover_image, is_completed } = body
 
     const { data, error } = await supabase
       .from('cards')
@@ -64,6 +64,9 @@ export async function PUT(
         description,
         position,
         list_id,
+        cover_color,
+        cover_image,
+        is_completed,
         updated_at: new Date().toISOString()
       })
       .eq('id', params.id)

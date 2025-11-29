@@ -1,5 +1,6 @@
 'use client'
 
+import { useLanguage } from '@/lib/language-context'
 import type { Board } from '@/lib/supabase'
 import './BoardCard.css'
 
@@ -10,9 +11,11 @@ interface BoardCardProps {
 }
 
 export default function BoardCard({ board, onClick, onDelete }: BoardCardProps) {
+  const { t } = useLanguage()
+  
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (confirm('Are you sure you want to delete this board?')) {
+    if (confirm(t.boards.deleteConfirm)) {
       onDelete()
     }
   }

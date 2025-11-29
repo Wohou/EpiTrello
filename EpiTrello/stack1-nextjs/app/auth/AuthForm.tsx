@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
+import { useLanguage } from '@/lib/language-context'
 import './auth.css'
 
 export default function AuthForm() {
@@ -13,6 +14,7 @@ export default function AuthForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const { t } = useLanguage()
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,9 +40,9 @@ export default function AuthForm() {
         if (data.user) {
           // Check if email confirmation is required
           if (data.user.identities && data.user.identities.length === 0) {
-            setError('This email is already registered. Please sign in instead.')
+            setError(t.auth.emailExists)
           } else {
-            alert('Check your email for the confirmation link!')
+            alert(t.auth.checkEmail)
             setIsSignUp(false)
           }
         }
@@ -54,7 +56,7 @@ export default function AuthForm() {
         if (error) {
           // Check if error is due to unconfirmed email
           if (error.message.includes('Email not confirmed')) {
-            setError('Please confirm your email before signing in. Check your inbox for the confirmation link.')
+            setError(t.auth.confirmEmail)
           } else {
             throw error
           }
@@ -71,7 +73,7 @@ export default function AuthForm() {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred during authentication')
+      setError(err.message || t.auth.authError)
     } finally {
       setLoading(false)
     }
@@ -93,7 +95,7 @@ export default function AuthForm() {
       // OAuth will redirect to provider's login page
       // After successful login, will redirect to /auth/callback
     } catch (err: any) {
-      setError(err.message || 'An error occurred during OAuth sign in')
+      setError(err.message || t.auth.oauthError)
       setLoading(false)
     }
   }
@@ -105,13 +107,13 @@ export default function AuthForm() {
           className={`auth-tab ${!isSignUp ? 'active' : ''}`}
           onClick={() => setIsSignUp(false)}
         >
-          Sign In
+          {t.auth.signIn}
         </button>
         <button
           className={`auth-tab ${isSignUp ? 'active' : ''}`}
           onClick={() => setIsSignUp(true)}
         >
-          Sign Up
+          {t.auth.signUp}
         </button>
       </div>
 
@@ -124,13 +126,13 @@ export default function AuthForm() {
       <form onSubmit={handleEmailAuth} className="auth-form-content">
         {isSignUp && (
           <div className="form-group">
-            <label htmlFor="username">Username</label>
+            <label htmlFor="username">{t.auth.username}</label>
             <input
               id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              placeholder={t.auth.usernamePlaceholder}
               required={isSignUp}
               disabled={loading}
             />
@@ -138,26 +140,26 @@ export default function AuthForm() {
         )}
 
         <div className="form-group">
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">{t.auth.email}</label>
           <input
             id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
+            placeholder={t.auth.emailPlaceholder}
             required
             disabled={loading}
           />
         </div>
 
         <div className="form-group">
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password">{t.auth.password}</label>
           <input
             id="password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
+            placeholder={t.auth.passwordPlaceholder}
             required
             disabled={loading}
             minLength={6}
@@ -169,12 +171,12 @@ export default function AuthForm() {
           className="auth-submit-btn"
           disabled={loading}
         >
-          {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
+          {loading ? t.auth.loading : isSignUp ? t.auth.signUp : t.auth.signIn}
         </button>
       </form>
 
       <div className="auth-divider">
-        <span>OR</span>
+        <span>{t.auth.or}</span>
       </div>
 
       <div className="oauth-buttons">
@@ -190,7 +192,7 @@ export default function AuthForm() {
             <path d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
             <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
           </svg>
-          Continue with Google
+          {t.auth.continueWithGoogle}
         </button>
 
         <button
@@ -202,19 +204,19 @@ export default function AuthForm() {
           <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
             <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
           </svg>
-          Continue with GitHub
+          {t.auth.continueWithGithub}
         </button>
       </div>
 
       <div className="auth-footer">
         <p>
-          {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+          {isSignUp ? t.auth.alreadyHaveAccount : t.auth.dontHaveAccount}{' '}
           <button
             type="button"
             className="auth-switch-btn"
             onClick={() => setIsSignUp(!isSignUp)}
           >
-            {isSignUp ? 'Sign In' : 'Sign Up'}
+            {isSignUp ? t.auth.signIn : t.auth.signUp}
           </button>
         </p>
       </div>

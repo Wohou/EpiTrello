@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase-browser'
+import { useLanguage } from '@/lib/language-context'
 import CreateBoardModal from '@/components/CreateBoardModal'
 import BoardCard from '@/components/BoardCard'
 import ProfileMenu from '@/components/ProfileMenu'
@@ -17,6 +18,7 @@ export default function BoardList() {
   const [userEmail, setUserEmail] = useState<string>('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const router = useRouter()
+  const { t } = useLanguage()
 
   useEffect(() => {
     fetchUser()
@@ -74,19 +76,19 @@ export default function BoardList() {
   }
 
   if (loading) {
-    return <div className="loading">Loading boards...</div>
+    return <div className="loading">{t.boards.loading}</div>
   }
 
   return (
     <div className="board-list-container">
       <div className="header">
         <div className="header-left">
-          <h1>My Boards</h1>
-          <span className="welcome-text">Welcome, {username}!</span>
+          <h1>{t.boards.myBoards}</h1>
+          <span className="welcome-text">{t.boards.welcome.replace('{name}', username)}</span>
         </div>
         <div className="header-right">
           <button className="create-button" onClick={() => setIsModalOpen(true)}>
-            Create New Board
+            {t.boards.createBoard}
           </button>
           <ProfileMenu username={username} userEmail={userEmail} avatarUrl={avatarUrl} />
         </div>

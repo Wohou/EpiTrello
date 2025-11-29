@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import ListColumn from '@/components/ListColumn'
 import CreateListButton from '@/components/CreateListButton'
 import type { BoardWithLists, List, Card } from '@/lib/supabase'
@@ -33,6 +34,162 @@ export default function BoardView({ boardId }: BoardViewProps) {
       console.error('Error fetching board:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDragEnd = async (result: DropResult) => {
+    const { destination, source, type } = result
+
+    // Dropped outside a droppable area
+    if (!destination) return
+
+    // Dropped in the same position
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
+      return
+    }
+
+    if (!board) return
+
+    // Dragging lists
+    if (type === 'list') {
+      const newLists = Array.from(board.lists)
+      const [movedList] = newLists.splice(source.index, 1)
+      newLists.splice(destination.index, 0, movedList)
+
+      // Update positions
+      const updatedLists = newLists.map((list, index) => ({
+        ...list,
+        position: index,
+      }))
+
+      // Optimistic update
+      setBoard({ ...board, lists: updatedLists })
+
+      // Save to database
+      try {
+        await fetch('/api/lists/reorder', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lists: updatedLists.map(l => ({ id: l.id, position: l.position })),
+          }),
+        })
+      } catch (error) {
+        console.error('Error reordering lists:', error)
+        // Revert on error
+        fetchBoard()
+      }
+      return
+    }
+
+    // Dragging cards
+    if (type === 'card') {
+      const sourceListId = source.droppableId
+      const destListId = destination.droppableId
+
+      const sourceList = board.lists.find(l => l.id === sourceListId)
+      const destList = board.lists.find(l => l.id === destListId)
+
+      if (!sourceList || !destList) return
+
+      // Same list - reorder within list
+      if (sourceListId === destListId) {
+        const newCards = Array.from(sourceList.cards)
+        const [movedCard] = newCards.splice(source.index, 1)
+        newCards.splice(destination.index, 0, movedCard)
+
+        // Update positions
+        const updatedCards = newCards.map((card, index) => ({
+          ...card,
+          position: index,
+        }))
+
+        // Optimistic update
+        setBoard({
+          ...board,
+          lists: board.lists.map(list =>
+            list.id === sourceListId ? { ...list, cards: updatedCards } : list
+          ),
+        })
+
+        // Save to database
+        try {
+          await fetch('/api/cards/reorder', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cards: updatedCards.map(c => ({ 
+                id: c.id, 
+                position: c.position,
+                list_id: sourceListId 
+              })),
+            }),
+          })
+        } catch (error) {
+          console.error('Error reordering cards:', error)
+          fetchBoard()
+        }
+      } else {
+        // Different list - move card between lists
+        const sourceCards = Array.from(sourceList.cards)
+        const destCards = Array.from(destList.cards)
+
+        const [movedCard] = sourceCards.splice(source.index, 1)
+        movedCard.list_id = destListId
+        destCards.splice(destination.index, 0, movedCard)
+
+        // Update positions
+        const updatedSourceCards = sourceCards.map((card, index) => ({
+          ...card,
+          position: index,
+        }))
+        const updatedDestCards = destCards.map((card, index) => ({
+          ...card,
+          position: index,
+        }))
+
+        // Optimistic update
+        setBoard({
+          ...board,
+          lists: board.lists.map(list => {
+            if (list.id === sourceListId) {
+              return { ...list, cards: updatedSourceCards }
+            }
+            if (list.id === destListId) {
+              return { ...list, cards: updatedDestCards }
+            }
+            return list
+          }),
+        })
+
+        // Save to database
+        try {
+          await fetch('/api/cards/reorder', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cards: [
+                ...updatedSourceCards.map(c => ({ 
+                  id: c.id, 
+                  position: c.position,
+                  list_id: sourceListId 
+                })),
+                ...updatedDestCards.map(c => ({ 
+                  id: c.id, 
+                  position: c.position,
+                  list_id: destListId 
+                })),
+              ],
+            }),
+          })
+        } catch (error) {
+          console.error('Error moving card:', error)
+          fetchBoard()
+        }
+      }
     }
   }
 
@@ -278,20 +435,41 @@ export default function BoardView({ boardId }: BoardViewProps) {
         </div>
       </div>
 
-      <div className="lists-container">
-        {board.lists.map((list) => (
-          <ListColumn
-            key={list.id}
-            list={list}
-            onDeleteList={() => handleDeleteList(list.id)}
-            onUpdateList={handleUpdateList}
-            onCreateCard={(title, description) => handleCreateCard(list.id, title, description)}
-            onDeleteCard={(cardId) => handleDeleteCard(list.id, cardId)}
-            onUpdateCard={handleUpdateCard}
-          />
-        ))}
-        <CreateListButton onCreate={handleCreateList} />
-      </div>
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <Droppable droppableId="board" type="list" direction="horizontal">
+          {(provided) => (
+            <div
+              className="lists-container"
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+            >
+              {board.lists.map((list, index) => (
+                <Draggable key={list.id} draggableId={list.id} index={index}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      className={`list-wrapper ${snapshot.isDragging ? 'dragging' : ''}`}
+                    >
+                      <ListColumn
+                        list={list}
+                        dragHandleProps={provided.dragHandleProps}
+                        onDeleteList={() => handleDeleteList(list.id)}
+                        onUpdateList={handleUpdateList}
+                        onCreateCard={(title, description) => handleCreateCard(list.id, title, description)}
+                        onDeleteCard={(cardId) => handleDeleteCard(list.id, cardId)}
+                        onUpdateCard={handleUpdateCard}
+                      />
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+              <CreateListButton onCreate={handleCreateList} />
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
     </div>
   )
 }

@@ -131,6 +131,17 @@
   gap: 16px;
   overflow-x: auto;
   padding-bottom: 20px;
+  align-items: flex-start;
+}
+
+/* Drag and drop styles */
+.list-wrapper {
+  flex-shrink: 0;
+}
+
+.list-wrapper.dragging {
+  opacity: 0.9;
+  transform: rotate(3deg);
 }
 
 .loading, .error {

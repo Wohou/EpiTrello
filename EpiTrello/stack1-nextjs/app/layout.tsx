@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import CursorGlow from '@/components/CursorGlow'
 import { ThemeProvider } from '@/lib/theme-context'
+import { LanguageProvider } from '@/lib/language-context'
 
 export const metadata: Metadata = {
   title: 'EpiTrello',
@@ -19,10 +20,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ThemeProvider>
-          <CursorGlow />
-          {children}
-        </ThemeProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            <CursorGlow />
+            {children}
+          </ThemeProvider>
+        </LanguageProvider>
       </body>
     </html>
   )

@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
+import { Droppable, Draggable, DraggableProvidedDragHandleProps } from '@hello-pangea/dnd'
 import CardItem from './CardItem'
 import type { ListWithCards, Card } from '@/lib/supabase'
 import './ListColumn.css'
 
 interface ListColumnProps {
   list: ListWithCards
+  dragHandleProps?: DraggableProvidedDragHandleProps | null
   onDeleteList: () => void
   onUpdateList?: (listId: string, title: string) => void
   onCreateCard: (title: string, description: string) => void
@@ -16,6 +18,7 @@ interface ListColumnProps {
 
 export default function ListColumn({
   list,
+  dragHandleProps,
   onDeleteList,
   onUpdateList,
   onCreateCard,
@@ -62,7 +65,7 @@ export default function ListColumn({
 
   return (
     <div className="list-column">
-      <div className="list-header">
+      <div className="list-header" {...dragHandleProps}>
         {editingTitle ? (
           <div className="edit-list-title-container">
             <input
@@ -86,16 +89,35 @@ export default function ListColumn({
         </button>
       </div>
 
-      <div className="cards-container">
-        {list.cards.map((card) => (
-          <CardItem
-            key={card.id}
-            card={card}
-            onDelete={() => onDeleteCard(card.id)}
-            onUpdate={(updates) => onUpdateCard(card.id, updates)}
-          />
-        ))}
-      </div>
+      <Droppable droppableId={list.id} type="card">
+        {(provided, snapshot) => (
+          <div
+            className={`cards-container ${snapshot.isDraggingOver ? 'dragging-over' : ''}`}
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+          >
+            {list.cards.map((card, index) => (
+              <Draggable key={card.id} draggableId={card.id} index={index}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.draggableProps}
+                    {...provided.dragHandleProps}
+                    className={snapshot.isDragging ? 'card-dragging' : ''}
+                  >
+                    <CardItem
+                      card={card}
+                      onDelete={() => onDeleteCard(card.id)}
+                      onUpdate={(updates) => onUpdateCard(card.id, updates)}
+                    />
+                  </div>
+                )}
+              </Draggable>
+            ))}
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
 
       {isAddingCard ? (
         <div className="add-card-form">
