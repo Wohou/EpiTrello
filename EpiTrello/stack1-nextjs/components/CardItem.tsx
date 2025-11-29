@@ -31,6 +31,7 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
   const [showColorPicker, setShowColorPicker] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
   const [uploading, setUploading] = useState(false)
+  const [showImageModal, setShowImageModal] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -70,7 +71,7 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
   }
 
   const handleColorChange = (color: string | null) => {
-    onUpdate({ cover_color: color, cover_image: null })
+    onUpdate({ cover_color: color })
     setShowColorPicker(false)
     setShowMenu(false)
   }
@@ -105,7 +106,7 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
       }
 
       const { url } = await response.json()
-      onUpdate({ cover_image: url, cover_color: null })
+      onUpdate({ cover_image: url })
       setShowMenu(false)
     } catch (error) {
       console.error('Error uploading image:', error)
@@ -119,7 +120,12 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
   }
 
   const handleRemoveCover = () => {
-    onUpdate({ cover_image: null, cover_color: null })
+    onUpdate({ cover_color: null })
+    setShowMenu(false)
+  }
+
+  const handleRemoveImage = () => {
+    onUpdate({ cover_image: null })
     setShowMenu(false)
   }
 
@@ -131,7 +137,7 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
   const handleMenuClick = (e: React.MouseEvent) => {
     e.stopPropagation()
     e.preventDefault()
-    
+
     // Calculate position for the dropdown menu
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect()
@@ -140,13 +146,13 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
         left: rect.right - 220 // 220 is the min-width of the menu
       })
     }
-    
+
     setShowMenu(!showMenu)
   }
 
   const handleCardClick = () => {
-    if (!showMenu) {
-      setIsEditing(true)
+    if (!showMenu && card.cover_image) {
+      setShowImageModal(true)
     }
   }
 
@@ -185,16 +191,16 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
 
   return (
     <div className={`card-item ${card.is_completed ? 'completed' : ''}`} onClick={handleCardClick}>
+      {card.cover_color && (
+        <div className="card-cover" style={{ backgroundColor: card.cover_color }} />
+      )}
       {card.cover_image && (
         <div className="card-cover-image">
           <img src={card.cover_image} alt="Cover" />
         </div>
       )}
-      {card.cover_color && !card.cover_image && (
-        <div className="card-cover" style={{ backgroundColor: card.cover_color }} />
-      )}
       <div className="card-content">
-        <button 
+        <button
           className={`card-checkbox ${card.is_completed ? 'checked' : ''}`}
           onClick={handleToggleComplete}
           title={card.is_completed ? 'Marquer comme non terminé' : 'Marquer comme terminé'}
@@ -206,7 +212,7 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
           {card.description && <div className="card-description">{card.description}</div>}
         </div>
       </div>
-      
+
       {/* Hidden file input for image upload */}
       <input
         type="file"
@@ -215,19 +221,19 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
         accept="image/*"
         style={{ display: 'none' }}
       />
-      
+
       <div className="card-menu-container" ref={menuRef}>
-        <button 
+        <button
           ref={buttonRef}
-          className="card-menu-button" 
+          className="card-menu-button"
           onClick={handleMenuClick}
           title={t.cards.cardMenu}
         >
           ⋯
         </button>
-        
+
         {showMenu && (
-          <div 
+          <div
             className="card-dropdown-menu"
             style={{ top: menuPosition.top, left: menuPosition.left }}
           >
@@ -235,9 +241,9 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
               <span className="menu-icon">✏️</span>
               {t.cards.editCard}
             </button>
-            
-            <button 
-              className="menu-item" 
+
+            <button
+              className="menu-item"
               onClick={(e) => {
                 e.stopPropagation()
                 setShowColorPicker(!showColorPicker)
@@ -246,7 +252,7 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
               <span className="menu-icon">🎨</span>
               {t.cards.changeCover}
             </button>
-            
+
             {showColorPicker && (
               <div className="color-picker">
                 <div className="color-picker-header">{t.cards.changeCover}</div>
@@ -255,7 +261,7 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
                     <button
                       key={color.value || 'none'}
                       className={`color-option ${card.cover_color === color.value ? 'selected' : ''}`}
-                      style={{ 
+                      style={{
                         backgroundColor: color.value || '#fff',
                         border: color.value ? 'none' : '2px solid #ddd'
                       }}
@@ -271,9 +277,9 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
                 </div>
               </div>
             )}
-            
-            <button 
-              className="menu-item" 
+
+            <button
+              className="menu-item"
               onClick={(e) => {
                 e.stopPropagation()
                 fileInputRef.current?.click()
@@ -281,12 +287,25 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
               disabled={uploading}
             >
               <span className="menu-icon">🖼️</span>
-              {uploading ? 'Upload...' : (t.cards.addImage || 'Ajouter une image')}
+              {uploading ? 'Upload...' : (card.cover_image ? (t.cards.changeImage || 'Changer la photo') : (t.cards.addImage || 'Ajouter une photo'))}
             </button>
-            
-            {(card.cover_image || card.cover_color) && (
-              <button 
-                className="menu-item" 
+
+            {card.cover_image && (
+              <button
+                className="menu-item"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleRemoveImage()
+                }}
+              >
+                <span className="menu-icon">🖼️</span>
+                {t.cards.removeImage || 'Supprimer la photo'}
+              </button>
+            )}
+
+            {card.cover_color && (
+              <button
+                className="menu-item"
                 onClick={(e) => {
                   e.stopPropagation()
                   handleRemoveCover()
@@ -296,9 +315,9 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
                 {t.cards.removeCover || 'Supprimer la couverture'}
               </button>
             )}
-            
+
             <div className="menu-divider" />
-            
+
             <button className="menu-item danger" onClick={handleDelete}>
               <span className="menu-icon">🗑️</span>
               {t.cards.deleteCard}
@@ -306,6 +325,25 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
           </div>
         )}
       </div>
+
+      {/* Image Lightbox Modal */}
+      {showImageModal && card.cover_image && (
+        <div
+          className="image-modal-overlay"
+          onClick={() => setShowImageModal(false)}
+        >
+          <div className="image-modal-content" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="image-modal-close"
+              onClick={() => setShowImageModal(false)}
+            >
+              ✕
+            </button>
+            <img src={card.cover_image} alt={card.title} />
+            <div className="image-modal-title">{card.title}</div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

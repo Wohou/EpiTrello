@@ -21,7 +21,7 @@ export const translations = {
       logoutYes: 'Oui, déconnecter',
       profile: 'Profil',
     },
-    
+
     // Authentication
     auth: {
       signIn: 'Connexion',
@@ -54,7 +54,7 @@ export const translations = {
       dontHaveAccount: "Pas encore de compte ?",
       tagline: 'Organisez votre travail et votre vie, enfin.',
     },
-    
+
     // Boards
     boards: {
       myBoards: 'Mes Boards',
@@ -79,7 +79,7 @@ export const translations = {
       errorDeleting: 'Erreur lors de la suppression',
       errorLoading: 'Erreur lors du chargement des boards',
     },
-    
+
     // Lists
     lists: {
       addList: 'Ajouter une liste',
@@ -89,7 +89,7 @@ export const translations = {
       deleteList: 'Supprimer la liste',
       editList: 'Modifier la liste',
     },
-    
+
     // Cards
     cards: {
       addCard: 'Ajouter une carte',
@@ -104,8 +104,10 @@ export const translations = {
       noCards: 'Aucune carte',
       cardMenu: 'Options de la carte',
       changeCover: 'Changer la couverture',
-      removeCover: 'Retirer la couverture',
-      addImage: 'Ajouter une image',
+      removeCover: 'Supprimer la couverture',
+      addImage: 'Ajouter une photo',
+      changeImage: 'Changer la photo',
+      removeImage: 'Supprimer la photo',
       coverColors: {
         none: 'Aucune',
         red: 'Rouge',
@@ -118,7 +120,7 @@ export const translations = {
         gray: 'Gris',
       },
     },
-    
+
     // Settings
     settings: {
       accountSettings: 'Paramètres du compte',
@@ -136,19 +138,19 @@ export const translations = {
       notAuthenticated: 'Non authentifié',
       bucketNotFound: 'Le bucket "avatars" n\'existe pas. Veuillez configurer Supabase Storage',
       removeError: 'Erreur lors de la suppression',
-      
+
       // Theme
       appTheme: "Thème de l'application",
       customizeAppearance: 'Personnalisez l\'apparence de votre interface',
       themeApplied: 'Thème "{name}" appliqué !',
-      
+
       // Language
       language: 'Langue',
       selectLanguage: 'Sélectionnez votre langue préférée',
       french: 'Français',
       english: 'English',
       languageChanged: 'Langue changée avec succès',
-      
+
       // Personal Info
       personalInfo: 'Informations personnelles',
       username: "Nom d'utilisateur",
@@ -157,14 +159,14 @@ export const translations = {
       usernameHelp: 'Ce nom sera affiché dans vos boards',
       emailHelp: "L'email ne peut pas être modifié",
       usernameRequired: "Le nom d'utilisateur ne peut pas être vide",
-      
+
       // Actions
       saving: 'Enregistrement...',
       saveChanges: 'Enregistrer les modifications',
       profileUpdated: 'Profil mis à jour avec succès !',
       updateError: 'Erreur lors de la mise à jour',
     },
-    
+
     // Themes
     themes: {
       default: 'Gradient Bleu',
@@ -177,7 +179,7 @@ export const translations = {
       mint: 'Menthe Fraîche',
     },
   },
-  
+
   en: {
     // Common
     common: {
@@ -197,7 +199,7 @@ export const translations = {
       logoutYes: 'Yes, log out',
       profile: 'Profile',
     },
-    
+
     // Authentication
     auth: {
       signIn: 'Sign In',
@@ -230,7 +232,7 @@ export const translations = {
       dontHaveAccount: "Don't have an account?",
       tagline: 'Organize your work and life, finally.',
     },
-    
+
     // Boards
     boards: {
       myBoards: 'My Boards',
@@ -255,7 +257,7 @@ export const translations = {
       errorDeleting: 'Error deleting board',
       errorLoading: 'Error loading boards',
     },
-    
+
     // Lists
     lists: {
       addList: 'Add a list',
@@ -265,7 +267,7 @@ export const translations = {
       deleteList: 'Delete list',
       editList: 'Edit list',
     },
-    
+
     // Cards
     cards: {
       addCard: 'Add a card',
@@ -281,7 +283,9 @@ export const translations = {
       cardMenu: 'Card options',
       changeCover: 'Change cover',
       removeCover: 'Remove cover',
-      addImage: 'Add an image',
+      addImage: 'Add a photo',
+      changeImage: 'Change photo',
+      removeImage: 'Remove photo',
       coverColors: {
         none: 'None',
         red: 'Red',
@@ -294,7 +298,7 @@ export const translations = {
         gray: 'Gray',
       },
     },
-    
+
     // Settings
     settings: {
       accountSettings: 'Account Settings',
@@ -312,19 +316,19 @@ export const translations = {
       notAuthenticated: 'Not authenticated',
       bucketNotFound: 'The "avatars" bucket does not exist. Please configure Supabase Storage',
       removeError: 'Error removing photo',
-      
+
       // Theme
       appTheme: 'Application Theme',
       customizeAppearance: 'Customize your interface appearance',
       themeApplied: 'Theme "{name}" applied!',
-      
+
       // Language
       language: 'Language',
       selectLanguage: 'Select your preferred language',
       french: 'Français',
       english: 'English',
       languageChanged: 'Language changed successfully',
-      
+
       // Personal Info
       personalInfo: 'Personal Information',
       username: 'Username',
@@ -333,14 +337,14 @@ export const translations = {
       usernameHelp: 'This name will be displayed in your boards',
       emailHelp: 'Email cannot be modified',
       usernameRequired: 'Username cannot be empty',
-      
+
       // Actions
       saving: 'Saving...',
       saveChanges: 'Save Changes',
       profileUpdated: 'Profile updated successfully!',
       updateError: 'Error updating profile',
     },
-    
+
     // Themes
     themes: {
       default: 'Blue Gradient',
