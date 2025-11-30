@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { supabaseBrowser } from '@/lib/supabase-browser'
@@ -8,6 +8,7 @@ import ListColumn from '@/components/ListColumn'
 import CreateListButton from '@/components/CreateListButton'
 import BoardManageMenu from '@/components/BoardManageMenu'
 import type { BoardWithLists, List, Card, BoardMember } from '@/lib/supabase'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import './BoardView.css'
 
 interface BoardViewProps {
@@ -26,12 +27,116 @@ export default function BoardView({ boardId }: BoardViewProps) {
   const [isSharedBoard, setIsSharedBoard] = useState(false)
   const [members, setMembers] = useState<BoardMember[]>([])
   const router = useRouter()
+  const channelRef = useRef<RealtimeChannel | null>(null)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastLocalChangeRef = useRef<number>(0)
+
+  // Memoized fetch function for realtime updates with debounce
+  const fetchBoardData = useCallback(async () => {
+    // Skip if we just made a local change (within 1 second)
+    const timeSinceLastChange = Date.now() - lastLocalChangeRef.current
+    if (timeSinceLastChange < 1000) {
+      console.log('Skipping realtime fetch - recent local change')
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/boards/${boardId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setBoard(data)
+        console.log('Board data refreshed from realtime')
+      }
+    } catch (error) {
+      console.error('Error fetching board:', error)
+    }
+  }, [boardId])
+
+  // Debounced fetch to avoid multiple rapid updates
+  const debouncedFetchBoardData = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      fetchBoardData()
+    }, 300)
+  }, [fetchBoardData])
+
+  // Mark that we just made a local change
+  const markLocalChange = useCallback(() => {
+    lastLocalChangeRef.current = Date.now()
+  }, [])
 
   useEffect(() => {
     fetchCurrentUser()
     fetchBoard()
     fetchMembers()
-  }, [boardId])
+
+    // Set up realtime subscription
+    const channel = supabaseBrowser
+      .channel(`board-${boardId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'lists',
+          filter: `board_id=eq.${boardId}`
+        },
+        () => {
+          console.log('Realtime: Lists changed')
+          debouncedFetchBoardData()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cards'
+        },
+        () => {
+          console.log('Realtime: Cards changed')
+          debouncedFetchBoardData()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'boards',
+          filter: `id=eq.${boardId}`
+        },
+        (payload) => {
+          console.log('Realtime: Board updated')
+          // Update board title/description without full refetch
+          if (payload.new) {
+            const newData = payload.new as { title: string; description?: string | null }
+            setBoard((prev: BoardWithLists | null) => prev ? {
+              ...prev,
+              title: newData.title,
+              description: newData.description ?? null
+            } : prev)
+          }
+        }
+      )
+      .subscribe((status: string) => {
+        console.log('Realtime status:', status)
+      })
+
+    channelRef.current = channel
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+      if (channelRef.current) {
+        supabaseBrowser.removeChannel(channelRef.current)
+      }
+    }
+  }, [boardId, debouncedFetchBoardData])
 
   const fetchCurrentUser = async () => {
     const { data: { user } } = await supabaseBrowser.auth.getUser()
