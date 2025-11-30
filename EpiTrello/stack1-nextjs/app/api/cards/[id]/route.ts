@@ -55,20 +55,27 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { title, description, position, list_id, cover_color, cover_image, is_completed } = body
+    const { title, description, position, list_id, cover_color, cover_image, is_completed, start_date, due_date } = body
+
+    // Build update object with only provided fields
+    const updateData: Record<string, any> = {
+      last_modified_by: user.id,
+      updated_at: new Date().toISOString()
+    }
+
+    if (title !== undefined) updateData.title = title
+    if (description !== undefined) updateData.description = description
+    if (position !== undefined) updateData.position = position
+    if (list_id !== undefined) updateData.list_id = list_id
+    if (cover_color !== undefined) updateData.cover_color = cover_color
+    if (cover_image !== undefined) updateData.cover_image = cover_image
+    if (is_completed !== undefined) updateData.is_completed = is_completed
+    if (start_date !== undefined) updateData.start_date = start_date
+    if (due_date !== undefined) updateData.due_date = due_date
 
     const { data, error } = await supabase
       .from('cards')
-      .update({
-        title,
-        description,
-        position,
-        list_id,
-        cover_color,
-        cover_image,
-        is_completed,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', params.id)
       .select()
       .single()

@@ -71,7 +71,14 @@ export async function POST(request: NextRequest) {
     // RLS will check if user has access to the board
     const { data, error } = await supabase
       .from('cards')
-      .insert([{ title, description, list_id, position }])
+      .insert([{
+        title,
+        description,
+        list_id,
+        position,
+        created_by: user.id,
+        last_modified_by: user.id
+      }])
       .select()
       .single()
 

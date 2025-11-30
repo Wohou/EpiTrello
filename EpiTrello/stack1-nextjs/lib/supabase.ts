@@ -42,13 +42,33 @@ export interface Board {
   owner_id: string
   created_at: string
   updated_at: string
+  // Extended fields for shared boards
+  owner_username?: string
+  is_shared?: boolean
 }
 
 export interface BoardMember {
+  id: string
   board_id: string
   user_id: string
   role: 'owner' | 'admin' | 'member' | 'observer'
   joined_at: string
+  // Extended fields
+  username?: string
+  avatar_url?: string
+}
+
+export interface BoardInvitation {
+  id: string
+  board_id: string
+  inviter_id: string
+  invitee_id: string
+  status: 'pending' | 'accepted' | 'declined'
+  created_at: string
+  responded_at: string | null
+  // Extended fields
+  board_title?: string
+  inviter_username?: string
 }
 
 export interface List {
@@ -69,8 +89,15 @@ export interface Card {
   cover_color: string | null
   cover_image: string | null
   is_completed: boolean
+  start_date: string | null
+  due_date: string | null
+  created_by: string | null
+  last_modified_by: string | null
   created_at: string
   updated_at: string
+  // Extended fields for display
+  created_by_username?: string
+  last_modified_by_username?: string
 }
 
 // Extended types with relations

@@ -5,10 +5,20 @@ import { useLanguage } from '@/lib/language-context'
 import type { Card } from '@/lib/supabase'
 import './CardItem.css'
 
+interface CardLog {
+  created_by: string | null
+  created_by_username: string | null
+  created_at: string | null
+  last_modified_by: string | null
+  last_modified_by_username: string | null
+  updated_at: string | null
+}
+
 interface CardItemProps {
   card: Card
   onDelete: () => void
   onUpdate: (updates: Partial<Card>) => void
+  isSharedBoard?: boolean
 }
 
 const CARD_COLORS = [
@@ -23,7 +33,59 @@ const CARD_COLORS = [
   { name: 'Gris', value: '#b3bac5' },
 ]
 
-export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
+// Helper functions for dates
+const getDaysRemaining = (dueDate: string): number => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const due = new Date(dueDate)
+  due.setHours(0, 0, 0, 0)
+  return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+const getDuration = (startDate: string, endDate: string): number => {
+  const start = new Date(startDate)
+  start.setHours(0, 0, 0, 0)
+  const end = new Date(endDate)
+  end.setHours(0, 0, 0, 0)
+  return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+}
+
+const formatDateShort = (dateString: string): string => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'short'
+  })
+}
+
+// Generate Google Calendar URL
+const generateGoogleCalendarUrl = (
+  title: string,
+  description: string | null,
+  startDate: string | null,
+  endDate: string
+): string => {
+  const formatDateForGoogle = (date: string): string => {
+    return new Date(date).toISOString().replace(/-|:|\.\d{3}/g, '').slice(0, 8)
+  }
+
+  const start = startDate ? formatDateForGoogle(startDate) : formatDateForGoogle(endDate)
+  // For all-day events, end date should be the next day
+  const endDateObj = new Date(endDate)
+  endDateObj.setDate(endDateObj.getDate() + 1)
+  const end = formatDateForGoogle(endDateObj.toISOString())
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: title,
+    dates: `${start}/${end}`,
+    details: description || '',
+  })
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`
+}
+
+export default function CardItem({ card, onDelete, onUpdate, isSharedBoard = false }: CardItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [title, setTitle] = useState(card.title)
   const [description, setDescription] = useState(card.description || '')
@@ -32,6 +94,13 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
   const [uploading, setUploading] = useState(false)
   const [showImageModal, setShowImageModal] = useState(false)
+  const [showLogModal, setShowLogModal] = useState(false)
+  const [showDateModal, setShowDateModal] = useState(false)
+  const [cardLog, setCardLog] = useState<CardLog | null>(null)
+  const [loadingLog, setLoadingLog] = useState(false)
+  const [tempStartDate, setTempStartDate] = useState<string>(card.start_date ? new Date(card.start_date).toISOString().split('T')[0] : '')
+  const [tempDueDate, setTempDueDate] = useState<string>(card.due_date ? new Date(card.due_date).toISOString().split('T')[0] : '')
+  const [useStartDate, setUseStartDate] = useState(!!card.start_date)
   const menuRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -161,6 +230,99 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
     onUpdate({ is_completed: !card.is_completed })
   }
 
+  const handleShowLog = async () => {
+    setShowMenu(false)
+    setLoadingLog(true)
+    setShowLogModal(true)
+
+    try {
+      const response = await fetch(`/api/cards/${card.id}/log`)
+      if (response.ok) {
+        const data = await response.json()
+        setCardLog(data)
+      }
+    } catch (error) {
+      console.error('Error fetching card log:', error)
+    } finally {
+      setLoadingLog(false)
+    }
+  }
+
+  const handleOpenDateModal = () => {
+    setTempStartDate(card.start_date ? new Date(card.start_date).toISOString().split('T')[0] : '')
+    setTempDueDate(card.due_date ? new Date(card.due_date).toISOString().split('T')[0] : '')
+    setUseStartDate(!!card.start_date)
+    setShowDateModal(true)
+    setShowMenu(false)
+  }
+
+  const handleSaveDates = () => {
+    const updates: Partial<Card> = {}
+
+    if (useStartDate && tempStartDate) {
+      updates.start_date = new Date(tempStartDate).toISOString()
+    } else {
+      updates.start_date = null
+    }
+
+    if (tempDueDate) {
+      updates.due_date = new Date(tempDueDate).toISOString()
+    } else {
+      updates.due_date = null
+    }
+
+    onUpdate(updates)
+    setShowDateModal(false)
+  }
+
+  const handleRemoveDates = () => {
+    onUpdate({ start_date: null, due_date: null })
+    setTempStartDate('')
+    setTempDueDate('')
+    setUseStartDate(false)
+    setShowDateModal(false)
+  }
+
+  const getDateBadgeInfo = () => {
+    if (!card.due_date) return null
+
+    const daysRemaining = getDaysRemaining(card.due_date)
+    let badgeClass = 'date-badge'
+    let text = ''
+
+    if (card.is_completed) {
+      badgeClass += ' completed'
+      text = formatDateShort(card.due_date)
+    } else if (daysRemaining < 0) {
+      badgeClass += ' overdue'
+      text = t.cards.overdue || 'En retard'
+    } else if (daysRemaining === 0) {
+      badgeClass += ' due-today'
+      text = t.cards.dueToday || 'Aujourd\'hui'
+    } else if (daysRemaining === 1) {
+      badgeClass += ' due-soon'
+      text = t.cards.dueTomorrow || 'Demain'
+    } else {
+      badgeClass += ' upcoming'
+      const template = daysRemaining === 1 ? (t.cards.daysRemaining || '{count} jour restant') : (t.cards.daysRemainingPlural || '{count} jours restants')
+      text = template.replace('{count}', String(daysRemaining))
+    }
+
+    return { badgeClass, text, daysRemaining }
+  }
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return '-'
+    const date = new Date(dateString)
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
   if (isEditing) {
     return (
       <div className="card-item editing">
@@ -210,6 +372,36 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
         <div className="card-text">
           <div className={`card-title ${card.is_completed ? 'completed' : ''}`}>{card.title}</div>
           {card.description && <div className="card-description">{card.description}</div>}
+          {/* Date Badge */}
+          {card.due_date && (() => {
+            const badgeInfo = getDateBadgeInfo()
+            if (!badgeInfo) return null
+            return (
+              <div className="card-dates-display">
+                <span className={badgeInfo.badgeClass}>
+                  <span className="date-icon">📅</span>
+                  {card.start_date && (
+                    <span className="date-range">
+                      {formatDateShort(card.start_date)} → {formatDateShort(card.due_date)}
+                    </span>
+                  )}
+                  {!card.start_date && (
+                    <span className="date-due">{formatDateShort(card.due_date)}</span>
+                  )}
+                  <span className="date-remaining">{badgeInfo.text}</span>
+                </span>
+                {card.start_date && card.due_date && (
+                  <span className="duration-badge">
+                    {(() => {
+                      const days = getDuration(card.start_date, card.due_date)
+                      const template = days === 1 ? (t.cards.duration || '{count} jour') : (t.cards.durationPlural || '{count} jours')
+                      return template.replace('{count}', String(days))
+                    })()}
+                  </span>
+                )}
+              </div>
+            )
+          })()}
         </div>
       </div>
 
@@ -240,6 +432,11 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
             <button className="menu-item" onClick={handleEdit}>
               <span className="menu-icon">✏️</span>
               {t.cards.editCard}
+            </button>
+
+            <button className="menu-item" onClick={handleOpenDateModal}>
+              <span className="menu-icon">📅</span>
+              {t.cards.setDates || 'Définir les dates'}
             </button>
 
             <button
@@ -317,6 +514,12 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
             )}
 
             <div className="menu-divider" />
+            <button className="menu-item" onClick={handleShowLog}>
+              <span className="menu-icon">📋</span>
+              {t.cards.viewActivity || 'Voir l\'activité'}
+            </button>
+
+            <div className="menu-divider" />
 
             <button className="menu-item danger" onClick={handleDelete}>
               <span className="menu-icon">🗑️</span>
@@ -341,6 +544,139 @@ export default function CardItem({ card, onDelete, onUpdate }: CardItemProps) {
             </button>
             <img src={card.cover_image} alt={card.title} />
             <div className="image-modal-title">{card.title}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Card Activity Log Modal */}
+      {showLogModal && (
+        <div
+          className="image-modal-overlay"
+          onClick={() => setShowLogModal(false)}
+        >
+          <div className="card-log-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="image-modal-close"
+              onClick={() => setShowLogModal(false)}
+            >
+              ✕
+            </button>
+            <h3>{t.cards.activityLog || 'Historique d\'activité'}</h3>
+            {loadingLog ? (
+              <div className="log-loading">{t.common.loading || 'Chargement...'}</div>
+            ) : cardLog ? (
+              <div className="log-content">
+                <div className="log-entry">
+                  <span className="log-label">{t.cards.createdBy || 'Créé par'}</span>
+                  <span className="log-value">
+                    {cardLog.created_by_username || t.cards.unknownUser || 'Utilisateur inconnu'}
+                  </span>
+                  <span className="log-date">{formatDate(cardLog.created_at)}</span>
+                </div>
+                <div className="log-entry">
+                  <span className="log-label">{t.cards.lastModifiedBy || 'Dernière modification par'}</span>
+                  <span className="log-value">
+                    {cardLog.last_modified_by_username || cardLog.created_by_username || t.cards.unknownUser || 'Utilisateur inconnu'}
+                  </span>
+                  <span className="log-date">{formatDate(cardLog.updated_at)}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="log-empty">{t.cards.noActivityLog || 'Aucune activité enregistrée'}</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Date Picker Modal */}
+      {showDateModal && (
+        <div
+          className="image-modal-overlay"
+          onClick={() => setShowDateModal(false)}
+        >
+          <div className="date-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="image-modal-close"
+              onClick={() => setShowDateModal(false)}
+            >
+              ✕
+            </button>
+            <h3>📅 {t.cards.dates || 'Dates'}</h3>
+
+            <div className="date-modal-content">
+              {/* Start Date Toggle */}
+              <div className="date-option">
+                <label className="date-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={useStartDate}
+                    onChange={(e) => setUseStartDate(e.target.checked)}
+                  />
+                  <span>{t.cards.startDate || 'Date de début'}</span>
+                </label>
+                {useStartDate && (
+                  <input
+                    type="date"
+                    className="date-input"
+                    value={tempStartDate}
+                    onChange={(e) => setTempStartDate(e.target.value)}
+                    max={tempDueDate || undefined}
+                  />
+                )}
+              </div>
+
+              {/* Due Date */}
+              <div className="date-option">
+                <label className="date-label">
+                  <span>{t.cards.dueDate || 'Date de fin'}</span>
+                </label>
+                <input
+                  type="date"
+                  className="date-input"
+                  value={tempDueDate}
+                  onChange={(e) => setTempDueDate(e.target.value)}
+                  min={useStartDate ? tempStartDate : undefined}
+                />
+              </div>
+
+              {/* Duration Preview */}
+              {tempDueDate && (
+                <div className="date-preview">
+                  <div className="preview-item">
+                    <span className="preview-icon">⏱️</span>
+                    <span className="preview-label">{t.cards.daysRemainingPlural?.replace('{count}', '') || 'Jours restants'}</span>
+                    <span className={`preview-value ${getDaysRemaining(tempDueDate) < 0 ? 'overdue' : getDaysRemaining(tempDueDate) <= 3 ? 'soon' : ''}`}>
+                      {getDaysRemaining(tempDueDate)} {getDaysRemaining(tempDueDate) === 1 ? 'jour' : 'jours'}
+                    </span>
+                  </div>
+                  {useStartDate && tempStartDate && (
+                    <div className="preview-item">
+                      <span className="preview-icon">📊</span>
+                      <span className="preview-label">{t.cards.durationPlural?.replace('{count}', '') || 'Durée totale'}</span>
+                      <span className="preview-value duration">
+                        {getDuration(tempStartDate, tempDueDate)} {getDuration(tempStartDate, tempDueDate) === 1 ? 'jour' : 'jours'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="date-modal-actions">
+              {(card.start_date || card.due_date) && (
+                <button className="date-remove-btn" onClick={handleRemoveDates}>
+                  {t.cards.removeDates || 'Supprimer les dates'}
+                </button>
+              )}
+              <div className="date-action-buttons">
+                <button className="date-cancel-btn" onClick={() => setShowDateModal(false)}>
+                  {t.cards.cancel || 'Annuler'}
+                </button>
+                <button className="date-save-btn" onClick={handleSaveDates} disabled={!tempDueDate}>
+                  {t.cards.save || 'Enregistrer'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

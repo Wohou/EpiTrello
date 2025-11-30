@@ -7,6 +7,7 @@ import { useLanguage } from '@/lib/language-context'
 import CreateBoardModal from '@/components/CreateBoardModal'
 import BoardCard from '@/components/BoardCard'
 import ProfileMenu from '@/components/ProfileMenu'
+import InvitationsPanel from '@/components/InvitationsPanel'
 import type { Board } from '@/lib/supabase'
 import './BoardList.css'
 
@@ -93,6 +94,8 @@ export default function BoardList() {
           <ProfileMenu username={username} userEmail={userEmail} avatarUrl={avatarUrl} />
         </div>
       </div>
+
+      <InvitationsPanel />
 
       <div className="boards-grid">
         {boards.map((board) => (

@@ -11,6 +11,7 @@ import './SettingsPage.css'
 export default function SettingsPage() {
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
+  const [userId, setUserId] = useState('')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const { currentTheme, setTheme } = useTheme()
   const { language, setLanguage, t } = useLanguage()
@@ -34,6 +35,7 @@ export default function SettingsPage() {
     try {
       const { data: { user } } = await supabaseBrowser.auth.getUser()
       if (user) {
+        setUserId(user.id)
         setUsername(user.user_metadata?.username || user.email || '')
         setEmail(user.email || '')
         setAvatarUrl(user.user_metadata?.avatar_url || null)
@@ -171,6 +173,16 @@ export default function SettingsPage() {
     router.push('/boards')
   }
 
+  const handleCopyUserId = async () => {
+    try {
+      await navigator.clipboard.writeText(userId)
+      setMessage({ type: 'success', text: t.settings.idCopied || 'ID copié dans le presse-papier' })
+    } catch (error) {
+      console.error('Error copying ID:', error)
+      setMessage({ type: 'error', text: t.settings.copyError || 'Erreur lors de la copie' })
+    }
+  }
+
   if (loading) {
     return <div className="settings-loading">{t.common.loading}</div>
   }
@@ -281,7 +293,7 @@ export default function SettingsPage() {
                 <span className="language-name">{t.settings.french}</span>
                 {language === 'fr' && <span className="check-icon">✓</span>}
               </div>
-              
+
               <div
                 className={`language-option ${language === 'en' ? 'selected' : ''}`}
                 onClick={async () => {
@@ -311,6 +323,28 @@ export default function SettingsPage() {
                 placeholder={t.settings.usernamePlaceholder}
               />
               <span className="field-help">{t.settings.usernameHelp}</span>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="userId">{t.settings.uniqueId || 'ID unique'}</label>
+              <div className="id-field-container">
+                <input
+                  id="userId"
+                  type="text"
+                  value={userId}
+                  disabled
+                  className="disabled-input id-input"
+                />
+                <button
+                  type="button"
+                  className="copy-id-button"
+                  onClick={handleCopyUserId}
+                  title={t.settings.copyId || 'Copier l\'ID'}
+                >
+                  📋
+                </button>
+              </div>
+              <span className="field-help">{t.settings.idHelp || 'Partagez cet ID pour recevoir des invitations'}</span>
             </div>
 
             <div className="form-group">

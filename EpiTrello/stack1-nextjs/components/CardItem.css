@@ -423,3 +423,360 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Card Activity Log Modal */
+.card-log-modal {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 340px;
+  max-width: 450px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  cursor: default;
+  animation: scaleIn 0.2s ease-out;
+}
+
+.card-log-modal h3 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #172b4d;
+  padding-right: 30px;
+}
+
+.log-loading {
+  text-align: center;
+  padding: 20px;
+  color: #5e6c84;
+}
+
+.log-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.log-entry {
+  background: #f7f8f9;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.log-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #5e6c84;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.log-value {
+  font-size: 15px;
+  font-weight: 500;
+  color: #172b4d;
+}
+
+.log-date {
+  font-size: 13px;
+  color: #6b778c;
+}
+
+.log-empty {
+  text-align: center;
+  padding: 20px;
+  color: #6b778c;
+  font-style: italic;
+}
+
+/* ==================== */
+/* Date Display on Card */
+/* ==================== */
+.card-dates-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.date-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background-color: #f4f5f7;
+  color: #5e6c84;
+}
+
+.date-badge .date-icon {
+  font-size: 12px;
+}
+
+.date-badge .date-range,
+.date-badge .date-due {
+  color: #172b4d;
+}
+
+.date-badge .date-remaining {
+  margin-left: 4px;
+  padding-left: 6px;
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.date-badge.upcoming {
+  background-color: #e3fcef;
+  color: #006644;
+}
+
+.date-badge.due-soon {
+  background-color: #fffae6;
+  color: #ff8b00;
+}
+
+.date-badge.due-today {
+  background-color: #fff4e5;
+  color: #de350b;
+}
+
+.date-badge.overdue {
+  background-color: #ffebe6;
+  color: #bf2600;
+}
+
+.date-badge.completed {
+  background-color: #e3fcef;
+  color: #006644;
+  text-decoration: line-through;
+}
+
+.duration-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background-color: #deebff;
+  color: #0747a6;
+}
+
+/* ==================== */
+/* Date Picker Modal */
+/* ==================== */
+.date-modal {
+  position: relative;
+  background: white;
+  border-radius: 16px;
+  padding: 28px;
+  min-width: 380px;
+  max-width: 420px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.35);
+  cursor: default;
+  animation: scaleIn 0.2s ease-out;
+}
+
+.date-modal h3 {
+  margin: 0 0 24px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #172b4d;
+  padding-right: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.date-option {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.date-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #172b4d;
+}
+
+.date-checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #0079bf;
+}
+
+.date-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #172b4d;
+}
+
+.date-input {
+  padding: 12px 14px;
+  border: 2px solid #dfe1e6;
+  border-radius: 8px;
+  font-size: 15px;
+  color: #172b4d;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background-color: #fafbfc;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #0079bf;
+  box-shadow: 0 0 0 3px rgba(0, 121, 191, 0.15);
+  background-color: white;
+}
+
+.date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.date-input::-webkit-calendar-picker-indicator:hover {
+  background-color: rgba(0, 121, 191, 0.1);
+}
+
+/* Date Preview */
+.date-preview {
+  background: linear-gradient(135deg, #f7f8f9 0%, #eef1f4 100%);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.preview-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.preview-icon {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+}
+
+.preview-label {
+  flex: 1;
+  font-size: 13px;
+  color: #5e6c84;
+}
+
+.preview-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #172b4d;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.preview-value.overdue {
+  background-color: #ffebe6;
+  color: #bf2600;
+}
+
+.preview-value.soon {
+  background-color: #fff4e5;
+  color: #de350b;
+}
+
+.preview-value.duration {
+  background-color: #deebff;
+  color: #0747a6;
+}
+
+/* Date Modal Actions */
+.date-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e1e4e8;
+}
+
+.date-remove-btn {
+  padding: 10px 16px;
+  background: none;
+  border: 1px solid #eb5a46;
+  border-radius: 8px;
+  color: #eb5a46;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.date-remove-btn:hover {
+  background-color: #ffebe6;
+}
+
+.date-action-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.date-cancel-btn {
+  padding: 10px 20px;
+  background-color: #f4f5f7;
+  border: none;
+  border-radius: 8px;
+  color: #5e6c84;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.date-cancel-btn:hover {
+  background-color: #e4e6ea;
+}
+
+.date-save-btn {
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #0079bf 0%, #0067a3 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 121, 191, 0.3);
+}
+
+.date-save-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #026aa7 0%, #005c94 100%);
+  box-shadow: 0 4px 12px rgba(0, 121, 191, 0.4);
+  transform: translateY(-1px);
+}
+
+.date-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -14,6 +14,7 @@ interface ListColumnProps {
   onCreateCard: (title: string, description: string) => void
   onDeleteCard: (cardId: string) => void
   onUpdateCard: (cardId: string, updates: Partial<Card>) => void
+  isSharedBoard?: boolean
 }
 
 export default function ListColumn({
@@ -24,6 +25,7 @@ export default function ListColumn({
   onCreateCard,
   onDeleteCard,
   onUpdateCard,
+  isSharedBoard = false,
 }: ListColumnProps) {
   const [isAddingCard, setIsAddingCard] = useState(false)
   const [newCardTitle, setNewCardTitle] = useState('')
@@ -109,6 +111,7 @@ export default function ListColumn({
                       card={card}
                       onDelete={() => onDeleteCard(card.id)}
                       onUpdate={(updates) => onUpdateCard(card.id, updates)}
+                      isSharedBoard={isSharedBoard}
                     />
                   </div>
                 )}

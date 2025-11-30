@@ -5,6 +5,18 @@
 
 .board-header {
   margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.board-header-left {
+  flex: 1;
+}
+
+.board-header-right {
+  flex-shrink: 0;
 }
 
 .back-button {

@@ -331,6 +331,41 @@
   cursor: not-allowed;
 }
 
+.id-field-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.id-field-container .id-input {
+  flex: 1;
+  font-family: monospace;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.copy-id-button {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copy-id-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.copy-id-button:active {
+  transform: translateY(0);
+}
+
 .field-help {
   display: block;
   margin-top: 6px;

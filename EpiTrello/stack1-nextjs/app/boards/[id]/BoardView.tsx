@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
+import { supabaseBrowser } from '@/lib/supabase-browser'
 import ListColumn from '@/components/ListColumn'
 import CreateListButton from '@/components/CreateListButton'
-import type { BoardWithLists, List, Card } from '@/lib/supabase'
+import BoardManageMenu from '@/components/BoardManageMenu'
+import type { BoardWithLists, List, Card, BoardMember } from '@/lib/supabase'
 import './BoardView.css'
 
 interface BoardViewProps {
@@ -19,22 +21,94 @@ export default function BoardView({ boardId }: BoardViewProps) {
   const [editingDescription, setEditingDescription] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
   const [tempDescription, setTempDescription] = useState('')
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [isOwner, setIsOwner] = useState(false)
+  const [isSharedBoard, setIsSharedBoard] = useState(false)
+  const [members, setMembers] = useState<BoardMember[]>([])
   const router = useRouter()
 
   useEffect(() => {
+    fetchCurrentUser()
     fetchBoard()
+    fetchMembers()
   }, [boardId])
+
+  const fetchCurrentUser = async () => {
+    const { data: { user } } = await supabaseBrowser.auth.getUser()
+    if (user) {
+      setCurrentUserId(user.id)
+    }
+  }
 
   const fetchBoard = async () => {
     try {
       const response = await fetch(`/api/boards/${boardId}`)
       const data = await response.json()
       setBoard(data)
+
+      // Check if current user is owner
+      const { data: { user } } = await supabaseBrowser.auth.getUser()
+      if (user && data.owner_id === user.id) {
+        setIsOwner(true)
+        setIsSharedBoard(false)
+      } else {
+        setIsOwner(false)
+        setIsSharedBoard(true)
+      }
     } catch (error) {
       console.error('Error fetching board:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchMembers = async () => {
+    try {
+      const response = await fetch(`/api/boards/${boardId}/members`)
+      if (response.ok) {
+        const data = await response.json()
+        setMembers(data)
+      }
+    } catch (error) {
+      console.error('Error fetching members:', error)
+    }
+  }
+
+  const handleInvite = async (userId: string) => {
+    const response = await fetch('/api/invitations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ board_id: boardId, invitee_id: userId }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to send invitation')
+    }
+  }
+
+  const handleRevokeMember = async (userId: string) => {
+    const response = await fetch(`/api/boards/${boardId}/members?userId=${userId}`, {
+      method: 'DELETE',
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to remove member')
+    }
+  }
+
+  const handleLeaveBoard = async () => {
+    const response = await fetch(`/api/boards/${boardId}/members`, {
+      method: 'DELETE',
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to leave board')
+    }
+
+    router.push('/boards')
   }
 
   const handleDragEnd = async (result: DropResult) => {
@@ -121,10 +195,10 @@ export default function BoardView({ boardId }: BoardViewProps) {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              cards: updatedCards.map(c => ({ 
-                id: c.id, 
+              cards: updatedCards.map(c => ({
+                id: c.id,
                 position: c.position,
-                list_id: sourceListId 
+                list_id: sourceListId
               })),
             }),
           })
@@ -172,15 +246,15 @@ export default function BoardView({ boardId }: BoardViewProps) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               cards: [
-                ...updatedSourceCards.map(c => ({ 
-                  id: c.id, 
+                ...updatedSourceCards.map(c => ({
+                  id: c.id,
                   position: c.position,
-                  list_id: sourceListId 
+                  list_id: sourceListId
                 })),
-                ...updatedDestCards.map(c => ({ 
-                  id: c.id, 
+                ...updatedDestCards.map(c => ({
+                  id: c.id,
                   position: c.position,
-                  list_id: destListId 
+                  list_id: destListId
                 })),
               ],
             }),
@@ -386,52 +460,66 @@ export default function BoardView({ boardId }: BoardViewProps) {
   return (
     <div className="board-view-container">
       <div className="board-header">
-        <button className="back-button" onClick={() => router.push('/boards')}>
-          ← Back to Boards
-        </button>
+        <div className="board-header-left">
+          <button className="back-button" onClick={() => router.push('/boards')}>
+            ← Back to Boards
+          </button>
 
-        <div className="board-title-section">
-          {editingTitle ? (
-            <div className="edit-title-container">
-              <input
-                type="text"
-                value={tempTitle}
-                onChange={(e) => setTempTitle(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
-                autoFocus
-                className="edit-title-input"
-              />
-              <button onClick={handleSaveTitle} className="validate-button">✓</button>
-              <button onClick={handleCancelEdit} className="cancel-button">✕</button>
-            </div>
-          ) : (
-            <h1 onDoubleClick={handleStartEditTitle} className="editable-title">
-              {board.title}
-            </h1>
-          )}
+          <div className="board-title-section">
+            {editingTitle ? (
+              <div className="edit-title-container">
+                <input
+                  type="text"
+                  value={tempTitle}
+                  onChange={(e) => setTempTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
+                  autoFocus
+                  className="edit-title-input"
+                />
+                <button onClick={handleSaveTitle} className="validate-button">✓</button>
+                <button onClick={handleCancelEdit} className="cancel-button">✕</button>
+              </div>
+            ) : (
+              <h1 onDoubleClick={handleStartEditTitle} className="editable-title">
+                {board.title}
+              </h1>
+            )}
+          </div>
+
+          <div className="board-description-section">
+            {editingDescription ? (
+              <div className="edit-description-container">
+                <textarea
+                  value={tempDescription}
+                  onChange={(e) => setTempDescription(e.target.value)}
+                  autoFocus
+                  className="edit-description-input"
+                  rows={3}
+                />
+                <button onClick={handleSaveDescription} className="validate-button">✓</button>
+                <button onClick={handleCancelEdit} className="cancel-button">✕</button>
+              </div>
+            ) : (
+              <p
+                onDoubleClick={handleStartEditDescription}
+                className="board-description editable-description"
+              >
+                {board.description || 'Double-cliquez pour ajouter une description...'}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="board-description-section">
-          {editingDescription ? (
-            <div className="edit-description-container">
-              <textarea
-                value={tempDescription}
-                onChange={(e) => setTempDescription(e.target.value)}
-                autoFocus
-                className="edit-description-input"
-                rows={3}
-              />
-              <button onClick={handleSaveDescription} className="validate-button">✓</button>
-              <button onClick={handleCancelEdit} className="cancel-button">✕</button>
-            </div>
-          ) : (
-            <p
-              onDoubleClick={handleStartEditDescription}
-              className="board-description editable-description"
-            >
-              {board.description || 'Double-cliquez pour ajouter une description...'}
-            </p>
-          )}
+        <div className="board-header-right">
+          <BoardManageMenu
+            boardId={boardId}
+            isOwner={isOwner}
+            members={members}
+            onInvite={handleInvite}
+            onRevokeMember={handleRevokeMember}
+            onLeaveBoard={handleLeaveBoard}
+            onRefreshMembers={fetchMembers}
+          />
         </div>
       </div>
 
@@ -459,6 +547,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
                         onCreateCard={(title, description) => handleCreateCard(list.id, title, description)}
                         onDeleteCard={(cardId) => handleDeleteCard(list.id, cardId)}
                         onUpdateCard={handleUpdateCard}
+                        isSharedBoard={isSharedBoard}
                       />
                     </div>
                   )}
