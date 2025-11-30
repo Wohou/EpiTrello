@@ -283,6 +283,21 @@ export default function CardItem({ card, onDelete, onUpdate, isSharedBoard = fal
     setShowDateModal(false)
   }
 
+  const handleAddToGoogleCalendar = () => {
+    const dueDateToUse = tempDueDate || (card.due_date ? new Date(card.due_date).toISOString().split('T')[0] : '')
+    const startDateToUse = useStartDate ? tempStartDate || (card.start_date ? new Date(card.start_date).toISOString().split('T')[0] : null) : null
+
+    if (!dueDateToUse) return
+
+    const url = generateGoogleCalendarUrl(
+      card.title,
+      card.description,
+      startDateToUse,
+      dueDateToUse
+    )
+    window.open(url, '_blank')
+  }
+
   const getDateBadgeInfo = () => {
     if (!card.due_date) return null
 
@@ -659,6 +674,27 @@ export default function CardItem({ card, onDelete, onUpdate, isSharedBoard = fal
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Google Calendar Button */}
+              {tempDueDate && (
+                <button
+                  className="google-calendar-btn"
+                  onClick={handleAddToGoogleCalendar}
+                  type="button"
+                >
+                  <svg className="google-calendar-icon" viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="#4285F4" d="M22 5.5v13c0 1.38-1.12 2.5-2.5 2.5H4.5C3.12 21 2 19.88 2 18.5v-13C2 4.12 3.12 3 4.5 3h15C20.88 3 22 4.12 22 5.5z"/>
+                    <path fill="#fff" d="M12 7v10M7 12h10"/>
+                    <rect fill="#fff" x="6" y="6" width="12" height="2"/>
+                    <rect fill="#fff" x="6" y="10" width="3" height="3"/>
+                    <rect fill="#fff" x="10.5" y="10" width="3" height="3"/>
+                    <rect fill="#fff" x="15" y="10" width="3" height="3"/>
+                    <rect fill="#fff" x="6" y="15" width="3" height="3"/>
+                    <rect fill="#fff" x="10.5" y="15" width="3" height="3"/>
+                  </svg>
+                  {t.cards.addToGoogleCalendar || 'Ajouter à Google Calendar'}
+                </button>
               )}
             </div>
 

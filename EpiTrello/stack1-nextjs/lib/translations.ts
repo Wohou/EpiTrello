@@ -128,6 +128,7 @@ export const translations = {
       dueToday: 'Aujourd\'hui',
       dueTomorrow: 'Demain',
       noDueDate: 'Pas de date limite',
+      addToGoogleCalendar: 'Ajouter à Google Calendar',
       save: 'Enregistrer',
       cancel: 'Annuler',
       coverColors: {
@@ -367,6 +368,7 @@ export const translations = {
       removeDates: 'Remove dates',
       daysRemaining: '{count} day remaining',
       daysRemainingPlural: '{count} days remaining',
+      addToGoogleCalendar: 'Add to Google Calendar',
       duration: '{count} day',
       durationPlural: '{count} days',
       overdue: 'Overdue',
