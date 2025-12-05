@@ -1,0 +1,458 @@
+/* GitHub Power-Up Modal Styles */
+
+.github-powerup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease;
+}
+
+.github-powerup-modal {
+  background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.github-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+}
+
+.github-close-btn:hover {
+  background: rgba(0, 0, 0, 0.2);
+  transform: rotate(90deg);
+}
+
+/* Header */
+.github-header {
+  margin-bottom: 20px;
+}
+
+.github-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 24px;
+  color: #333;
+}
+
+.github-icon {
+  fill: #24292e;
+}
+
+/* Connection Section */
+.github-connect-section {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.github-connect-section p {
+  color: #666;
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+.github-connect-btn {
+  background: #24292e;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.github-connect-btn:hover {
+  background: #2f363d;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.github-connect-btn:active {
+  transform: translateY(0);
+}
+
+/* Status */
+.github-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: rgba(46, 160, 67, 0.1);
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.github-connected-badge {
+  color: #2ea043;
+  font-size: 14px;
+}
+
+.github-connected-badge strong {
+  color: #24292e;
+}
+
+.github-disconnect-btn {
+  background: transparent;
+  color: #666;
+  border: 1px solid #ccc;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.github-disconnect-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: #999;
+}
+
+/* Actions */
+.github-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.github-action-btn {
+  background: white;
+  border: 2px solid #e1e4e8;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  color: #24292e;
+}
+
+.github-action-btn:hover {
+  border-color: #24292e;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.github-action-btn.primary {
+  background: #2ea043;
+  color: white;
+  border-color: #2ea043;
+}
+
+.github-action-btn.primary:hover {
+  background: #2c974b;
+  border-color: #2c974b;
+}
+
+/* Linked Issues Section */
+.github-linked-section {
+  margin-top: 24px;
+}
+
+.github-linked-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #333;
+}
+
+.github-loading {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.github-empty {
+  text-align: center;
+  padding: 20px;
+  color: #999;
+  font-size: 14px;
+}
+
+.github-linked-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.github-issue-card {
+  background: white;
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.2s;
+}
+
+.github-issue-card:hover {
+  border-color: #24292e;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.issue-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.issue-badge {
+  background: #f6f8fa;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #24292e;
+}
+
+.issue-state {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.issue-state.open {
+  background: rgba(46, 160, 67, 0.1);
+  color: #2ea043;
+}
+
+.issue-state.closed {
+  background: rgba(203, 36, 49, 0.1);
+  color: #cb2431;
+}
+
+.issue-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #24292e;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.issue-repo {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.issue-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.issue-link-btn {
+  flex: 1;
+  background: #0366d6;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.issue-link-btn:hover {
+  background: #0256c5;
+}
+
+.issue-unlink-btn {
+  background: transparent;
+  color: #cb2431;
+  border: 1px solid #cb2431;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.issue-unlink-btn:hover {
+  background: rgba(203, 36, 49, 0.1);
+}
+
+/* View Header (Link/Create views) */
+.github-view-header {
+  margin-bottom: 20px;
+}
+
+.github-back-btn {
+  background: transparent;
+  border: none;
+  color: #0366d6;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.github-back-btn:hover {
+  color: #0256c5;
+  text-decoration: underline;
+}
+
+.github-view-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #333;
+}
+
+/* Form */
+.github-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-group select,
+.form-group input,
+.form-group textarea {
+  padding: 10px;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s;
+  background: white;
+}
+
+.form-group select:focus,
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #0366d6;
+  box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.1);
+}
+
+.form-group select:disabled {
+  background: #f6f8fa;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.github-submit-btn {
+  background: #2ea043;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.github-submit-btn:hover:not(:disabled) {
+  background: #2c974b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(46, 160, 67, 0.3);
+}
+
+.github-submit-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.github-submit-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Scrollbar */
+.github-powerup-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.github-powerup-modal::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.github-powerup-modal::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.github-powerup-modal::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .github-powerup-modal {
+    width: 95%;
+    padding: 16px;
+    max-height: 90vh;
+  }
+
+  .github-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .github-header h3 {
+    font-size: 20px;
+  }
+}

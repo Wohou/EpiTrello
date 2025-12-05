@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, ChangeEvent } from 'react'
 import { useLanguage } from '@/lib/language-context'
 import type { Card } from '@/lib/supabase'
+import GitHubPowerUp from './GitHubPowerUp'
 import './CardItem.css'
 
 interface CardLog {
@@ -96,6 +97,7 @@ export default function CardItem({ card, onDelete, onUpdate, isSharedBoard = fal
   const [showImageModal, setShowImageModal] = useState(false)
   const [showLogModal, setShowLogModal] = useState(false)
   const [showDateModal, setShowDateModal] = useState(false)
+  const [showGitHubPowerUp, setShowGitHubPowerUp] = useState(false)
   const [cardLog, setCardLog] = useState<CardLog | null>(null)
   const [loadingLog, setLoadingLog] = useState(false)
   const [tempStartDate, setTempStartDate] = useState<string>(card.start_date ? new Date(card.start_date).toISOString().split('T')[0] : '')
@@ -534,6 +536,18 @@ export default function CardItem({ card, onDelete, onUpdate, isSharedBoard = fal
               {t.cards.viewActivity || 'Voir l\'activité'}
             </button>
 
+            <button 
+              className="menu-item"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowGitHubPowerUp(true)
+                setShowMenu(false)
+              }}
+            >
+              <span className="menu-icon">🔗</span>
+              {t.github?.powerUp || 'GitHub Power-Up'}
+            </button>
+
             <div className="menu-divider" />
 
             <button className="menu-item danger" onClick={handleDelete}>
@@ -715,6 +729,13 @@ export default function CardItem({ card, onDelete, onUpdate, isSharedBoard = fal
             </div>
           </div>
         </div>
+      )}
+
+      {showGitHubPowerUp && (
+        <GitHubPowerUp
+          cardId={card.id}
+          onClose={() => setShowGitHubPowerUp(false)}
+        />
       )}
     </div>
   )
