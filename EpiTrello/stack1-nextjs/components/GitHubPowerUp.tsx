@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useLanguage } from '@/lib/language-context'
-import { supabase } from '@/lib/supabase'
+import { supabaseBrowser } from '@/lib/supabase-browser'
 import type { CardGitHubLink, GitHubRepo, GitHubIssue } from '@/lib/supabase'
 import './GitHubPowerUp.css'
 
@@ -14,6 +14,7 @@ interface GitHubPowerUpProps {
 export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
   const { t } = useLanguage()
   const [connected, setConnected] = useState(false)
+  const [hasRepoScope, setHasRepoScope] = useState(false)
   const [githubUsername, setGithubUsername] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<'main' | 'link' | 'create'>('main')
@@ -48,6 +49,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
       if (response.ok) {
         const data = await response.json()
         setConnected(data.connected)
+        setHasRepoScope(data.hasRepoScope)
         setGithubUsername(data.github_username)
       }
     } catch (error) {
@@ -59,7 +61,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
 
   const connectGitHub = async () => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
+      const { data: sessionData } = await supabaseBrowser.auth.getSession()
       if (!sessionData?.session) {
         alert(t.github.connectionError)
         return
@@ -82,11 +84,11 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
       const data = await checkResponse.json()
 
       if (data.needsLinking || data.needsReauth) {
-        const { error } = await supabase.auth.linkIdentity({
+        const { error } = await supabaseBrowser.auth.linkIdentity({
           provider: 'github',
           options: {
-            scopes: 'user:email repo',
-            redirectTo: `${window.location.origin}/boards`,
+            scopes: 'user:email',
+            redirectTo: `${window.location.origin}/auth/callback`,
           },
         })
 
@@ -101,6 +103,26 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
       }
     } catch (error) {
       console.error('Error connecting GitHub:', error)
+      alert(t.github.connectionError)
+    }
+  }
+
+  const requestRepoAccess = async () => {
+    try {
+      const { error } = await supabaseBrowser.auth.linkIdentity({
+        provider: 'github',
+        options: {
+          scopes: 'user:email repo',
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (error) {
+        console.error('Error requesting repo access:', error)
+        alert(t.github.connectionError)
+      }
+    } catch (error) {
+      console.error('Error requesting repo access:', error)
       alert(t.github.connectionError)
     }
   }
@@ -378,8 +400,12 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
             <button 
               className="github-action-btn primary"
               onClick={() => {
-                setView('link')
-                fetchRepositories()
+                if (!hasRepoScope) {
+                  requestRepoAccess()
+                } else {
+                  setView('link')
+                  fetchRepositories()
+                }
               }}
             >
               🔗 {t.github.linkIssue}
@@ -387,8 +413,12 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
             <button 
               className="github-action-btn"
               onClick={() => {
-                setView('create')
-                fetchRepositories()
+                if (!hasRepoScope) {
+                  requestRepoAccess()
+                } else {
+                  setView('create')
+                  fetchRepositories()
+                }
               }}
             >
               ✨ {t.github.createIssue}

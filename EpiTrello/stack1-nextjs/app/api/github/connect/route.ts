@@ -59,9 +59,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const scopes = userResponse.headers.get('x-oauth-scopes') || ''
+    const hasRepoScope = scopes.includes('repo')
+
     return NextResponse.json({
       success: true,
       hasToken: true,
+      hasRepoScope,
     })
   } catch (error: any) {
     console.error('Error connecting GitHub:', error)
@@ -144,10 +148,33 @@ export async function GET() {
       .eq('id', user.id)
       .single()
 
+    // Check scopes if connected
+    let hasRepoScope = false
+    if (githubIdentity) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.provider_token) {
+        try {
+          const userResponse = await fetch('https://api.github.com/user', {
+            headers: {
+              'Authorization': `Bearer ${session.provider_token}`,
+              'Accept': 'application/vnd.github.v3+json',
+            },
+          })
+          if (userResponse.ok) {
+            const scopes = userResponse.headers.get('x-oauth-scopes') || ''
+            hasRepoScope = scopes.includes('repo')
+          }
+        } catch (e) {
+          console.error('Error checking scopes:', e)
+        }
+      }
+    }
+
     return NextResponse.json({
       connected: !!githubIdentity,
       github_username: profile?.github_username || githubIdentity?.identity_data?.user_name,
       connected_at: profile?.github_connected_at,
+      hasRepoScope,
     })
   } catch (error: any) {
     console.error('Error getting GitHub status:', error)
