@@ -61,7 +61,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
     try {
       const { data: sessionData } = await supabase.auth.getSession()
       if (!sessionData?.session) {
-        alert(t.github?.connectionError || 'Vous devez être connecté avant de lier GitHub. Merci de vous reconnecter.')
+        alert(t.github.connectionError)
         return
       }
 
@@ -72,9 +72,9 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
 
       if (!checkResponse.ok) {
         if (checkResponse.status === 401) {
-          alert(t.github?.connectionError || 'Session expirée. Merci de vous reconnecter.')
+          alert(t.github.connectionError)
         } else {
-          alert(t.github?.connectionError || 'Erreur lors de la vérification GitHub')
+          alert(t.github.connectionError)
         }
         return
       }
@@ -92,7 +92,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
 
         if (error) {
           console.error('Error linking GitHub:', error)
-          alert(t.github?.connectionError || 'Error linking GitHub')
+          alert(t.github.connectionError)
         }
       } else if (data.success) {
         setConnected(true)
@@ -101,7 +101,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
       }
     } catch (error) {
       console.error('Error connecting GitHub:', error)
-      alert(t.github?.connectionError || 'Error connecting GitHub')
+      alert(t.github.connectionError)
     }
   }
 
@@ -115,7 +115,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
       }
     } catch (error) {
       console.error('Error disconnecting GitHub:', error)
-      alert(t.github?.connectionError || 'Error disconnecting GitHub')
+      alert(t.github.connectionError)
     }
   }
 
@@ -140,7 +140,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
       const tokenResponse = await fetch('/api/github/token')
       if (!tokenResponse.ok) {
         if (tokenResponse.status === 403) {
-          alert(t.github?.connectionError || 'Session GitHub invalide. Merci de reconnecter GitHub.')
+          alert(t.github.connectionError)
           return
         }
         throw new Error('GitHub not connected')
@@ -161,7 +161,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
       }
     } catch (error) {
       console.error('Error fetching repositories:', error)
-      alert(t.github?.error || 'Error loading repositories')
+      alert(t.github.error)
     } finally {
       setLoadingRepos(false)
     }
@@ -174,7 +174,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
       const tokenResponse = await fetch('/api/github/token')
       if (!tokenResponse.ok) {
         if (tokenResponse.status === 403) {
-          alert(t.github?.connectionError || 'Session GitHub invalide. Merci de reconnecter GitHub.')
+          alert(t.github.connectionError)
           return
         }
         throw new Error('GitHub not connected')
@@ -199,7 +199,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
       }
     } catch (error) {
       console.error('Error fetching issues:', error)
-      alert(t.github?.error || 'Error loading issues')
+      alert(t.github.error)
     } finally {
       setLoadingIssues(false)
     }
@@ -244,11 +244,11 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
         setSelectedIssue(null)
       } else {
         const error = await response.json()
-        alert(error.error || t.github?.linkError || 'Error linking issue')
+        alert(error.error || t.github.linkError)
       }
     } catch (error) {
       console.error('Error linking issue:', error)
-      alert(t.github?.linkError || 'Error linking issue')
+      alert(t.github.linkError)
     }
   }
 
@@ -263,7 +263,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
       const tokenResponse = await fetch('/api/github/token')
       if (!tokenResponse.ok) {
         if (tokenResponse.status === 403) {
-          alert(t.github?.connectionError || 'Session GitHub invalide. Merci de reconnecter GitHub.')
+          alert(t.github.connectionError)
           return
         }
         throw new Error('GitHub not connected')
@@ -318,18 +318,18 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
         setIssueDescription('')
       } else {
         const error = await linkResponse.json()
-        alert(error.error || t.github?.createError || 'Error linking issue')
+        alert(error.error || t.github.createError)
       }
     } catch (error) {
       console.error('Error creating issue:', error)
-      alert(t.github?.createError || 'Error creating issue')
+      alert(t.github.createError)
     } finally {
       setCreating(false)
     }
   }
 
   const handleUnlink = async (linkId: string) => {
-    if (!confirm(t.github?.unlinkConfirm || 'Unlink this issue?')) return
+    if (!confirm(t.github.unlinkConfirm)) return
 
     try {
       const response = await fetch(`/api/cards/${cardId}/github?linkId=${linkId}`, {
@@ -341,7 +341,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
       }
     } catch (error) {
       console.error('Error unlinking issue:', error)
-      alert(t.github?.error || 'Error unlinking issue')
+      alert(t.github.error)
     }
   }
 
@@ -352,25 +352,25 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
           <svg className="github-icon" viewBox="0 0 16 16" width="20" height="20">
             <path fillRule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
           </svg>
-          {t.github?.powerUp || 'GitHub Power-Up'}
+          {t.github.powerUp}
         </h3>
       </div>
 
       {!connected ? (
         <div className="github-connect-section">
-          <p>{t.github?.notConnected || 'GitHub not connected'}</p>
+          <p>{t.github.notConnected}</p>
           <button className="github-connect-btn" onClick={connectGitHub}>
-            {t.github?.connectGitHub || 'Connect GitHub'}
+            {t.github.connectGitHub}
           </button>
         </div>
       ) : (
         <>
           <div className="github-status">
             <span className="github-connected-badge">
-              ✓ {t.github?.connected || 'Connected as'} <strong>{githubUsername}</strong>
+              ✓ {t.github.connected} <strong>{githubUsername}</strong>
             </span>
             <button className="github-disconnect-btn" onClick={disconnectGitHub}>
-              {t.github?.disconnectGitHub || 'Disconnect'}
+              {t.github.disconnectGitHub}
             </button>
           </div>
 
@@ -382,7 +382,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
                 fetchRepositories()
               }}
             >
-              🔗 {t.github?.linkIssue || 'Link issue'}
+              🔗 {t.github.linkIssue}
             </button>
             <button 
               className="github-action-btn"
@@ -391,16 +391,16 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
                 fetchRepositories()
               }}
             >
-              ✨ {t.github?.createIssue || 'Create issue'}
+              ✨ {t.github.createIssue}
             </button>
           </div>
 
           <div className="github-linked-section">
-            <h4>{t.github?.linkedIssues || 'Linked issues'}</h4>
+            <h4>{t.github.linkedIssues}</h4>
             {loadingLinks ? (
-              <div className="github-loading">{t.github?.loading || 'Loading...'}</div>
+              <div className="github-loading">{t.github.loading}</div>
             ) : linkedIssues.length === 0 ? (
-              <div className="github-empty">{t.github?.noLinkedIssues || 'No linked issues'}</div>
+              <div className="github-empty">{t.github.noLinkedIssues}</div>
             ) : (
               <div className="github-linked-list">
                 {linkedIssues.map((link) => (
@@ -411,8 +411,8 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
                       </span>
                       <span className={`issue-state ${link.github_state}`}>
                         {link.github_state === 'open' 
-                          ? (t.github?.openIssue || 'Open')
-                          : (t.github?.closedIssue || 'Closed')}
+                          ? (t.github.openIssue || 'Open')
+                          : (t.github.closedIssue || 'Closed')}
                       </span>
                     </div>
                     <div className="issue-title">{link.github_title}</div>
@@ -424,13 +424,13 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
                         rel="noopener noreferrer"
                         className="issue-link-btn"
                       >
-                        {t.github?.viewOnGitHub || 'View on GitHub'} ↗
+                        {t.github.viewOnGitHub} ↗
                       </a>
                       <button 
                         className="issue-unlink-btn"
                         onClick={() => handleUnlink(link.id)}
                       >
-                        {t.github?.unlink || 'Unlink'}
+                        {t.github.unlink}
                       </button>
                     </div>
                   </div>
@@ -449,12 +449,12 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
         <button className="github-back-btn" onClick={() => setView('main')}>
           ← {t.common?.back || 'Back'}
         </button>
-        <h3>{t.github?.linkExisting || 'Link existing issue'}</h3>
+        <h3>{t.github.linkExisting}</h3>
       </div>
 
       <div className="github-form">
         <div className="form-group">
-          <label>{t.github?.selectRepository || 'Select repository'}</label>
+          <label>{t.github.selectRepository}</label>
           <select 
             value={selectedRepo}
             onChange={(e) => handleRepoChange(e.target.value)}
@@ -462,9 +462,9 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
           >
             <option value="">
               {loadingRepos 
-                ? (t.github?.loadingRepos || 'Loading...')
+                ? t.github.loadingRepos
                 : (repos.length === 0 
-                    ? (t.github?.noRepos || 'No repositories')
+                    ? t.github.noRepos
                     : '-- Select a repository --')}
             </option>
             {repos.map((repo) => (
@@ -477,7 +477,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
 
         {selectedRepo && (
           <div className="form-group">
-            <label>{t.github?.selectIssue || 'Select issue'}</label>
+            <label>{t.github.selectIssue}</label>
             <select 
               value={selectedIssue || ''}
               onChange={(e) => setSelectedIssue(Number(e.target.value))}
@@ -485,9 +485,9 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
             >
               <option value="">
                 {loadingIssues 
-                  ? (t.github?.loadingIssues || 'Loading...')
+                  ? t.github.loadingIssues
                   : (issues.length === 0 
-                      ? (t.github?.noIssues || 'No open issues')
+                      ? t.github.noIssues
                       : '-- Select an issue --')}
               </option>
               {issues.map((issue) => (
@@ -504,7 +504,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
           onClick={handleLinkExisting}
           disabled={!selectedRepo || selectedIssue === null}
         >
-          {t.github?.linkExisting || 'Link'}
+          {t.github.linkExisting}
         </button>
       </div>
     </>
@@ -516,12 +516,12 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
         <button className="github-back-btn" onClick={() => setView('main')}>
           ← {t.common?.back || 'Back'}
         </button>
-        <h3>{t.github?.createIssue || 'Create issue'}</h3>
+        <h3>{t.github.createIssue}</h3>
       </div>
 
       <div className="github-form">
         <div className="form-group">
-          <label>{t.github?.selectRepository || 'Select repository'}</label>
+          <label>{t.github.selectRepository}</label>
           <select 
             value={selectedRepo}
             onChange={(e) => setSelectedRepo(e.target.value)}
@@ -529,9 +529,9 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
           >
             <option value="">
               {loadingRepos 
-                ? (t.github?.loadingRepos || 'Loading...')
+                ? t.github.loadingRepos
                 : (repos.length === 0 
-                    ? (t.github?.noRepos || 'No repositories')
+                    ? t.github.noRepos
                     : '-- Select a repository --')}
             </option>
             {repos.map((repo) => (
@@ -545,7 +545,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
         {selectedRepo && (
           <>
             <div className="form-group">
-              <label>{t.github?.issueTitle || 'Issue title'}</label>
+              <label>{t.github.issueTitle}</label>
               <input 
                 type="text"
                 value={issueTitle}
@@ -555,7 +555,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
             </div>
 
             <div className="form-group">
-              <label>{t.github?.issueDescription || 'Description'}</label>
+              <label>{t.github.issueDescription}</label>
               <textarea 
                 value={issueDescription}
                 onChange={(e) => setIssueDescription(e.target.value)}
@@ -572,8 +572,8 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
           disabled={!selectedRepo || !issueTitle.trim() || creating}
         >
           {creating 
-            ? (t.github?.creatingIssue || 'Creating...')
-            : (t.github?.createAndLink || 'Create & link')}
+            ? t.github.creatingIssue
+            : t.github.createAndLink}
         </button>
       </div>
     </>
@@ -584,7 +584,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
       <div className="github-powerup-overlay" onClick={onClose}>
         <div className="github-powerup-modal" onClick={(e) => e.stopPropagation()}>
           <button className="github-close-btn" onClick={onClose}>✕</button>
-          <div className="github-loading">{t.github?.loading || 'Loading...'}</div>
+          <div className="github-loading">{t.github.loading}</div>
         </div>
       </div>
     )

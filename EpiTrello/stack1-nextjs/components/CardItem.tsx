@@ -545,7 +545,7 @@ export default function CardItem({ card, onDelete, onUpdate, isSharedBoard = fal
               }}
             >
               <span className="menu-icon">🔗</span>
-              {t.github?.powerUp || 'GitHub Power-Up'}
+              {t.github.powerUp}
             </button>
 
             <div className="menu-divider" />
