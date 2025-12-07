@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
+import { updateCardCompletion } from '@/lib/github-utils'
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -68,21 +69,7 @@ async function handleIssueEvent(payload: any) {
     await new Promise(resolve => setTimeout(resolve, 100))
 
     for (const link of links) {
-        const { data: allLinks } = await supabase
-            .from('card_github_links')
-            .select('github_state')
-            .eq('card_id', link.card_id)
-
-        if (allLinks) {
-            const allClosed = allLinks.every((l: any) => l.github_state === 'closed')
-
-            await supabase
-                .from('cards')
-                .update({ completed: allClosed })
-                .eq('id', link.card_id)
-
-            console.log(`  ✓ Updated card ${link.card_id}: completed=${allClosed}`)
-        }
+        await updateCardCompletion(supabase, link.card_id)
     }
 
     return {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { updateCardCompletion } from '@/lib/github-utils'
 
 // Function to create webhook if it doesn't exist
 async function ensureWebhookExists(
@@ -253,6 +254,8 @@ export async function POST(
       console.log('❌ No GitHub token found in session')
     }
 
+    await updateCardCompletion(supabase, cardId)
+
     return NextResponse.json({
       ...data,
       webhook: webhookResult
@@ -285,6 +288,7 @@ export async function DELETE(
 
     const { searchParams } = new URL(request.url)
     const linkId = searchParams.get('linkId')
+    const cardId = params.id
 
     if (!linkId) {
       return NextResponse.json(
@@ -297,9 +301,11 @@ export async function DELETE(
       .from('card_github_links')
       .delete()
       .eq('id', linkId)
-      .eq('created_by', user.id) // Only allow deleting own links TODO: other allowed users?
+      .eq('created_by', user.id)
 
     if (error) throw error
+
+    await updateCardCompletion(supabase, cardId)
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
@@ -351,24 +357,7 @@ export async function PATCH(
 
     if (error) throw error
 
-    const { data: allCardLinks } = await supabase
-      .from('card_github_links')
-      .select('github_state')
-      .eq('card_id', cardId)
-
-    if (allCardLinks && allCardLinks.length > 0) {
-      const allIssuesClosed = allCardLinks.every((l: any) => l.github_state === 'closed')
-
-      await supabase
-        .from('cards')
-        .update({
-          is_completed: allIssuesClosed,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', cardId)
-
-      console.log(`Card ${cardId} updated: ${allIssuesClosed ? 'completed' : 'incomplete'} (${allCardLinks.length} issues)`)
-    }
+    await updateCardCompletion(supabase, cardId)
 
     return NextResponse.json(data)
   } catch (error: any) {
