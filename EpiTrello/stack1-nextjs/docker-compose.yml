@@ -6,6 +6,10 @@ services:
     environment:
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXT_PUBLIC_GITHUB_WEBHOOK_SECRET=${NEXT_PUBLIC_GITHUB_WEBHOOK_SECRET}
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
@@ -13,3 +17,22 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # Service ngrok pour tester les webhooks GitHub en local
+  # Démarrage : docker-compose --profile ngrok up
+  # Dashboard : http://localhost:4040
+  ngrok:
+    image: ngrok/ngrok:latest
+    command:
+      - "http"
+      - "nextjs-app:3000"
+      - "--log=stdout"
+    ports:
+      - "4040:4040"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    depends_on:
+      - nextjs-app
+    restart: unless-stopped
+    profiles:
+      - ngrok

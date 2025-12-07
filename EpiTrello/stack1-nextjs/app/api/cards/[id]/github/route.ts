@@ -2,6 +2,126 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 
+// Function to create webhook if it doesn't exist
+async function ensureWebhookExists(
+  repoOwner: string,
+  repoName: string,
+  token: string,
+  userId: string,
+  supabase: any
+) {
+  try {
+    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/github`
+    const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET
+
+    console.log('  📋 Webhook config:', {
+      url: webhookUrl,
+      secretSet: !!webhookSecret,
+      appUrlSet: !!process.env.NEXT_PUBLIC_APP_URL
+    })
+
+    if (!webhookSecret || !process.env.NEXT_PUBLIC_APP_URL) {
+      console.warn('⚠️ Webhook configuration missing, skipping webhook creation')
+      return { created: false, reason: 'config_missing' }
+    }
+
+    const listResponse = await fetch(
+      `https://api.github.com/repos/${repoOwner}/${repoName}/hooks`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+        }
+      }
+    )
+
+    if (listResponse.ok) {
+      const hooks = await listResponse.json()
+      const existingHook = hooks.find((hook: any) =>
+        hook.config?.url === webhookUrl
+      )
+
+      if (existingHook) {
+        await supabase
+          .from('github_webhooks')
+          .upsert({
+            user_id: userId,
+            repo_owner: repoOwner,
+            repo_name: repoName,
+            webhook_id: existingHook.id.toString(),
+            is_active: true,
+          }, {
+            onConflict: 'user_id,repo_owner,repo_name'
+          })
+
+        return { created: false, reason: 'already_exists', hookId: existingHook.id }
+      }
+    }
+
+    // Create new webhook
+    const createResponse = await fetch(
+      `https://api.github.com/repos/${repoOwner}/${repoName}/hooks`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: 'web',
+          active: true,
+          events: ['issues'],
+          config: {
+            url: webhookUrl,
+            content_type: 'json',
+            secret: webhookSecret,
+            insecure_ssl: '0'
+          }
+        })
+      }
+    )
+
+    if (createResponse.status === 403) {
+      return { created: false, reason: 'no_admin_permission' }
+    }
+
+    if (createResponse.status === 422) {
+      const errorData = await createResponse.json()
+      if (errorData.errors?.some((e: any) => e.message?.includes('already exists'))) {
+        return { created: false, reason: 'already_exists' }
+      }
+      return { created: false, reason: 'validation_error', details: errorData }
+    }
+
+    if (!createResponse.ok) {
+      console.error('Failed to create webhook:', await createResponse.text())
+      return { created: false, reason: 'api_error' }
+    }
+
+    const webhookData = await createResponse.json()
+
+    await supabase
+      .from('github_webhooks')
+      .upsert({
+        user_id: userId,
+        repo_owner: repoOwner,
+        repo_name: repoName,
+        webhook_id: webhookData.id.toString(),
+        is_active: true,
+        last_ping_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,repo_owner,repo_name'
+      })
+
+    return { created: true, hookId: webhookData.id }
+
+  } catch (error) {
+    console.error('Error ensuring webhook exists:', error)
+    return { created: false, reason: 'error', error }
+  }
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -100,7 +220,43 @@ export async function POST(
       throw error
     }
 
-    return NextResponse.json(data, { status: 201 })
+    // Automatically create webhook for this repository
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.provider_token
+
+    console.log('🔍 Attempting automatic webhook creation...')
+    console.log('  - Repo:', `${github_repo_owner}/${github_repo_name}`)
+    console.log('  - Token available:', !!token)
+
+    let webhookResult = null
+    if (token) {
+      webhookResult = await ensureWebhookExists(
+        github_repo_owner,
+        github_repo_name,
+        token,
+        user.id,
+        supabase
+      )
+
+      console.log('  - Webhook result:', webhookResult)
+
+      if (webhookResult.created) {
+        console.log(`✅ Webhook created automatically for ${github_repo_owner}/${github_repo_name}`)
+      } else if (webhookResult.reason === 'already_exists') {
+        console.log(`ℹ️ Webhook already exists for ${github_repo_owner}/${github_repo_name}`)
+      } else if (webhookResult.reason === 'no_admin_permission') {
+        console.log(`⚠️ No admin permission to create webhook for ${github_repo_owner}/${github_repo_name}`)
+      } else {
+        console.log(`❌ Failed to create webhook: ${webhookResult.reason}`, webhookResult)
+      }
+    } else {
+      console.log('❌ No GitHub token found in session')
+    }
+
+    return NextResponse.json({
+      ...data,
+      webhook: webhookResult
+    }, { status: 201 })
   } catch (error: any) {
     console.error('Error creating GitHub link:', error)
     return NextResponse.json(

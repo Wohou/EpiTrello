@@ -241,7 +241,19 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       })
 
       if (response.ok) {
+        const result = await response.json()
         await fetchLinkedIssues()
+        
+        if (result.webhook) {
+          if (result.webhook.created) {
+            console.log('✅ Webhook créé automatiquement pour la synchronisation bidirectionnelle')
+          } else if (result.webhook.reason === 'already_exists') {
+            console.log('ℹ️ Webhook déjà configuré - synchronisation bidirectionnelle active')
+          } else if (result.webhook.reason === 'no_admin_permission') {
+            console.log('⚠️ Pas de droits admin - synchronisation manuelle uniquement')
+          }
+        }
+        
         setView('main')
         setSelectedRepo('')
         setSelectedIssue(null)
@@ -262,7 +274,6 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
     setCreating(true)
 
     try {
-      // Get GitHub token from backend
       const tokenResponse = await fetch('/api/github/token')
       if (!tokenResponse.ok) {
         if (tokenResponse.status === 403) {
@@ -274,7 +285,6 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
 
       const { token } = await tokenResponse.json()
 
-      // Create issue on GitHub
       const createResponse = await fetch(
         `https://api.github.com/repos/${owner}/${repo}/issues`,
         {
@@ -298,7 +308,6 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
 
       const issue = await createResponse.json()
 
-      // Link to card
       const linkResponse = await fetch(`/api/cards/${cardId}/github`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -314,7 +323,17 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       })
 
       if (linkResponse.ok) {
+        const result = await linkResponse.json()
         await fetchLinkedIssues()
+        
+        if (result.webhook) {
+          if (result.webhook.created) {
+            console.log('✅ Webhook créé automatiquement pour la synchronisation bidirectionnelle')
+          } else if (result.webhook.reason === 'already_exists') {
+            console.log('ℹ️ Webhook déjà configuré - synchronisation bidirectionnelle active')
+          }
+        }
+        
         setView('main')
         setSelectedRepo('')
         setIssueTitle('')
