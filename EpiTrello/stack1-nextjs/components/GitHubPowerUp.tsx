@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useLanguage } from '@/lib/language-context'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import type { CardGitHubLink, GitHubRepo, GitHubIssue } from '@/lib/supabase'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 import './GitHubPowerUp.css'
 
 interface GitHubPowerUpProps {
@@ -36,13 +37,43 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
   // Linked issues
   const [linkedIssues, setLinkedIssues] = useState<CardGitHubLink[]>([])
   const [loadingLinks, setLoadingLinks] = useState(false)
+  
+  // Realtime subscription
+  const channelRef = useRef<RealtimeChannel | null>(null)
 
   useEffect(() => {
     checkGitHubConnection()
     if (connected) {
       fetchLinkedIssues()
     }
-  }, [connected])
+
+    const channel = supabaseBrowser
+      .channel(`card-github-${cardId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'card_github_links',
+          filter: `card_id=eq.${cardId}`
+        },
+        () => {
+          console.log('🔔 GitHub links changed - refreshing popup')
+          fetchLinkedIssues()
+        }
+      )
+      .subscribe((status) => {
+        console.log('Popup Realtime status:', status)
+      })
+
+    channelRef.current = channel
+
+    return () => {
+      if (channelRef.current) {
+        supabaseBrowser.removeChannel(channelRef.current)
+      }
+    }
+  }, [connected, cardId])
 
   const checkGitHubConnection = async () => {
     try {

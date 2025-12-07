@@ -65,6 +65,8 @@ async function handleIssueEvent(payload: any) {
         return { processed: false, error: updateError }
     }
 
+    await new Promise(resolve => setTimeout(resolve, 100))
+
     for (const link of links) {
         const { data: allLinks } = await supabase
             .from('card_github_links')

@@ -54,14 +54,17 @@ export async function GET(
 
         const cardsWithGitHub = await Promise.all(
           (cards || []).map(async (card) => {
-            const { count } = await supabase
+            const { data: githubLinks, error: linksError } = await supabase
               .from('card_github_links')
-              .select('*', { count: 'exact', head: true })
+              .select('*')
               .eq('card_id', card.id)
+
+            if (linksError) throw linksError
 
             return {
               ...card,
-              github_links_count: count || 0
+              github_links: githubLinks || [],
+              github_links_count: githubLinks?.length || 0
             }
           })
         )
