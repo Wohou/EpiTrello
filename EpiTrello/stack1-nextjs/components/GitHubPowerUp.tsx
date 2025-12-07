@@ -354,9 +354,18 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
     
     if (!confirm(`Voulez-vous ${action} l'issue #${link.github_number} sur GitHub ?`)) return
 
+    setLinkedIssues(prev => 
+      prev.map(issue => 
+        issue.id === link.id
+          ? { ...issue, github_state: newState }
+          : issue
+      )
+    )
+
     try {
       const tokenResponse = await fetch('/api/github/token')
       if (!tokenResponse.ok) {
+        await fetchLinkedIssues()
         alert(t.github.connectionError)
         return
       }
@@ -390,16 +399,18 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
 
         if (!updateResponse.ok) {
           console.error('Failed to update local state:', await updateResponse.text())
+          await fetchLinkedIssues()
         }
 
-        await fetchLinkedIssues()
         onUpdate?.()
       } else {
         const error = await response.json()
+        await fetchLinkedIssues()
         alert(`Erreur: ${error.message || 'Impossible de modifier l\'issue'}`)
       }
     } catch (error) {
       console.error('Error toggling issue state:', error)
+      await fetchLinkedIssues()
       alert(t.github.error)
     }
   }
