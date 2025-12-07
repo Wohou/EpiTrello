@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { updateCardCompletion } from '@/lib/github-utils'
+import { requireAuth, getGitHubToken } from '@/lib/api-utils'
 
 // Function to create webhook if it doesn't exist
 async function ensureWebhookExists(
@@ -130,14 +131,8 @@ export async function GET(
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const { user, error: authError } = await requireAuth(supabase)
+    if (authError) return authError
 
     const cardId = params.id
 
@@ -167,14 +162,8 @@ export async function POST(
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const { user, error: authError } = await requireAuth(supabase)
+    if (authError) return authError
 
     const cardId = params.id
     const body = await request.json()
@@ -222,8 +211,7 @@ export async function POST(
     }
 
     // Automatically create webhook for this repository
-    const { data: { session } } = await supabase.auth.getSession()
-    const token = session?.provider_token
+    const token = await getGitHubToken(supabase)
 
     console.log('🔍 Attempting automatic webhook creation...')
     console.log('  - Repo:', `${github_repo_owner}/${github_repo_name}`)
@@ -277,14 +265,8 @@ export async function DELETE(
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const { user, error: authError } = await requireAuth(supabase)
+    if (authError) return authError
 
     const { searchParams } = new URL(request.url)
     const linkId = searchParams.get('linkId')
@@ -325,14 +307,8 @@ export async function PATCH(
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const { user, error: authError } = await requireAuth(supabase)
+    if (authError) return authError
 
     const cardId = params.id
     const body = await request.json()

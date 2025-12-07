@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { requireAuth, getGitHubToken } from '@/lib/api-utils'
 
 /**
  * GET /api/github/token
@@ -11,18 +12,12 @@ export async function GET() {
     try {
         const supabase = createRouteHandlerClient({ cookies })
 
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        const { user, error } = await requireAuth(supabase)
+        if (error) return error
 
-        if (authError || !user) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            )
-        }
+        const token = await getGitHubToken(supabase)
 
-        const { data: { session } } = await supabase.auth.getSession()
-
-        if (!session?.provider_token) {
+        if (!token) {
             return NextResponse.json(
                 { error: 'GitHub token missing, please reconnect', needsReauth: true },
                 { status: 403 }
@@ -30,7 +25,7 @@ export async function GET() {
         }
 
         return NextResponse.json({
-            token: session.provider_token,
+            token,
             username: user.user_metadata?.user_name,
         })
     } catch (error: any) {

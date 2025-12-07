@@ -1,24 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { requireAuth, getGitHubIdentity, getGitHubToken } from '@/lib/api-utils'
 
 // Verify GitHub connection and get provider token
 export async function POST(request: NextRequest) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { user, error } = await requireAuth(supabase)
+    if (error) return error
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const { data: identitiesData } = await supabase.auth.getUserIdentities()
-    const identities = identitiesData?.identities ?? []
-    const githubIdentity = identities.find((identity: any) => identity.provider === 'github')
+    const githubIdentity = await getGitHubIdentity(supabase)
 
     if (!githubIdentity) {
       return NextResponse.json(
@@ -27,16 +20,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session?.provider_token && !session?.provider_refresh_token) {
-      return NextResponse.json(
-        { needsReauth: true },
-        { status: 200 }
-      )
-    }
-
-    const accessToken = session.provider_token
+    const accessToken = await getGitHubToken(supabase)
 
     if (!accessToken) {
       return NextResponse.json(
@@ -81,18 +65,10 @@ export async function DELETE() {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { user, error } = await requireAuth(supabase)
+    if (error) return error
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const { data: identitiesData } = await supabase.auth.getUserIdentities()
-    const identities = identitiesData?.identities ?? []
-    const githubIdentity = identities.find((identity: any) => identity.provider === 'github')
+    const githubIdentity = await getGitHubIdentity(supabase)
 
     if (githubIdentity) {
       const { error: unlinkError } = await supabase.auth.unlinkIdentity(githubIdentity)
@@ -129,18 +105,10 @@ export async function GET() {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { user, error } = await requireAuth(supabase)
+    if (error) return error
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const { data: identitiesData } = await supabase.auth.getUserIdentities()
-    const identities = identitiesData?.identities ?? []
-    const githubIdentity = identities.find((identity: any) => identity.provider === 'github')
+    const githubIdentity = await getGitHubIdentity(supabase)
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -151,12 +119,12 @@ export async function GET() {
     // Check scopes if connected
     let hasRepoScope = false
     if (githubIdentity) {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.provider_token) {
+      const accessToken = await getGitHubToken(supabase)
+      if (accessToken) {
         try {
           const userResponse = await fetch('https://api.github.com/user', {
             headers: {
-              'Authorization': `Bearer ${session.provider_token}`,
+              'Authorization': `Bearer ${accessToken}`,
               'Accept': 'application/vnd.github.v3+json',
             },
           })
