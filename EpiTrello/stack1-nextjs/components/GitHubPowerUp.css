@@ -247,6 +247,47 @@
   color: #24292e;
 }
 
+.issue-state-toggle {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.issue-state-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.issue-state-toggle.open {
+  background: #2ea043;
+  color: white;
+}
+
+.issue-state-toggle.open:hover {
+  background: #2c974b;
+}
+
+.issue-state-toggle.closed {
+  background: #cb2431;
+  color: white;
+}
+
+.issue-state-toggle.closed:hover {
+  background: #b31d28;
+}
+
+.toggle-icon {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
 .issue-state {
   font-size: 12px;
   padding: 2px 8px;

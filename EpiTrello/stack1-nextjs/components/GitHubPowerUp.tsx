@@ -87,8 +87,8 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
         const { error } = await supabaseBrowser.auth.linkIdentity({
           provider: 'github',
           options: {
-            scopes: 'user:email',
-            redirectTo: `${window.location.origin}/auth/callback`,
+            scopes: 'user:email repo',
+            redirectTo: `${window.location.href}`,
           },
         })
 
@@ -103,26 +103,6 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
       }
     } catch (error) {
       console.error('Error connecting GitHub:', error)
-      alert(t.github.connectionError)
-    }
-  }
-
-  const requestRepoAccess = async () => {
-    try {
-      const { error } = await supabaseBrowser.auth.linkIdentity({
-        provider: 'github',
-        options: {
-          scopes: 'user:email repo',
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
-
-      if (error) {
-        console.error('Error requesting repo access:', error)
-        alert(t.github.connectionError)
-      }
-    } catch (error) {
-      console.error('Error requesting repo access:', error)
       alert(t.github.connectionError)
     }
   }
@@ -367,6 +347,61 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
     }
   }
 
+  const handleToggleIssueState = async (link: CardGitHubLink) => {
+    const newState = link.github_state === 'open' ? 'closed' : 'open'
+    const action = newState === 'closed' ? 'fermer' : 'rouvrir'
+    
+    if (!confirm(`Voulez-vous ${action} l'issue #${link.github_number} sur GitHub ?`)) return
+
+    try {
+      const tokenResponse = await fetch('/api/github/token')
+      if (!tokenResponse.ok) {
+        alert(t.github.connectionError)
+        return
+      }
+
+      const { token } = await tokenResponse.json()
+
+      const response = await fetch(
+        `https://api.github.com/repos/${link.github_repo_owner}/${link.github_repo_name}/issues/${link.github_number}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ state: newState })
+        }
+      )
+
+      if (response.ok) {
+        const updatedIssue = await response.json()
+
+        const updateResponse = await fetch(`/api/cards/${cardId}/github`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            linkId: link.id,
+            github_state: updatedIssue.state
+          })
+        })
+
+        if (!updateResponse.ok) {
+          console.error('Failed to update local state:', await updateResponse.text())
+        }
+
+        await fetchLinkedIssues()
+      } else {
+        const error = await response.json()
+        alert(`Erreur: ${error.message || 'Impossible de modifier l\'issue'}`)
+      }
+    } catch (error) {
+      console.error('Error toggling issue state:', error)
+      alert(t.github.error)
+    }
+  }
+
   const renderMainView = () => (
     <>
       <div className="github-header">
@@ -400,12 +435,8 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
             <button 
               className="github-action-btn primary"
               onClick={() => {
-                if (!hasRepoScope) {
-                  requestRepoAccess()
-                } else {
-                  setView('link')
-                  fetchRepositories()
-                }
+                setView('link')
+                fetchRepositories()
               }}
             >
               🔗 {t.github.linkIssue}
@@ -413,12 +444,8 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
             <button 
               className="github-action-btn"
               onClick={() => {
-                if (!hasRepoScope) {
-                  requestRepoAccess()
-                } else {
                   setView('create')
                   fetchRepositories()
-                }
               }}
             >
               ✨ {t.github.createIssue}
@@ -439,11 +466,18 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
                       <span className={`issue-badge ${link.github_state}`}>
                         {link.github_type === 'pull_request' ? '↗️' : '⚫'} #{link.github_number}
                       </span>
-                      <span className={`issue-state ${link.github_state}`}>
+                      <button 
+                        className={`issue-state-toggle ${link.github_state}`}
+                        onClick={() => handleToggleIssueState(link)}
+                        title={link.github_state === 'open' ? 'Cliquer pour fermer' : 'Cliquer pour rouvrir'}
+                      >
                         {link.github_state === 'open' 
-                          ? (t.github.openIssue || 'Open')
-                          : (t.github.closedIssue || 'Closed')}
-                      </span>
+                          ? (t.github.openIssue || 'Ouvert')
+                          : (t.github.closedIssue || 'Fermé')}
+                        <span className="toggle-icon">
+                          {link.github_state === 'open' ? '✓' : '↻'}
+                        </span>
+                      </button>
                     </div>
                     <div className="issue-title">{link.github_title}</div>
                     <div className="issue-repo">{link.github_repo_owner}/{link.github_repo_name}</div>

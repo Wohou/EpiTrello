@@ -9,7 +9,6 @@ export async function GET(
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
@@ -19,7 +18,6 @@ export async function GET(
       )
     }
 
-    // Fetch board (RLS will check if user has access)
     const { data: board, error: boardError } = await supabase
       .from('boards')
       .select('*')
@@ -36,7 +34,6 @@ export async function GET(
       throw boardError
     }
 
-    // Fetch lists with cards
     const { data: lists, error: listsError } = await supabase
       .from('lists')
       .select('*')
@@ -45,7 +42,6 @@ export async function GET(
 
     if (listsError) throw listsError
 
-    // Fetch cards for each list
     const listsWithCards = await Promise.all(
       (lists || []).map(async (list) => {
         const { data: cards, error: cardsError } = await supabase
@@ -56,9 +52,23 @@ export async function GET(
 
         if (cardsError) throw cardsError
 
+        const cardsWithGitHub = await Promise.all(
+          (cards || []).map(async (card) => {
+            const { count } = await supabase
+              .from('card_github_links')
+              .select('*', { count: 'exact', head: true })
+              .eq('card_id', card.id)
+
+            return {
+              ...card,
+              github_links_count: count || 0
+            }
+          })
+        )
+
         return {
           ...list,
-          cards: cards || []
+          cards: cardsWithGitHub
         }
       })
     )
@@ -85,7 +95,6 @@ export async function PUT(
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
@@ -98,7 +107,6 @@ export async function PUT(
     const body = await request.json()
     const { title, description } = body
 
-    // RLS will check if user is the owner
     const { data, error } = await supabase
       .from('boards')
       .update({ title, description, updated_at: new Date().toISOString() })
@@ -133,7 +141,6 @@ export async function DELETE(
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
@@ -143,7 +150,6 @@ export async function DELETE(
       )
     }
 
-    // RLS will check if user is the owner
     const { error } = await supabase
       .from('boards')
       .delete()

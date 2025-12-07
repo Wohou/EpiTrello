@@ -154,3 +154,72 @@ export async function DELETE(
     )
   }
 }
+
+// Update a GitHub link state
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = createRouteHandlerClient({ cookies })
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const cardId = params.id
+    const body = await request.json()
+    const { linkId, github_state } = body
+
+    if (!linkId || !github_state) {
+      return NextResponse.json(
+        { error: 'linkId and github_state are required' },
+        { status: 400 }
+      )
+    }
+
+    const { data, error } = await supabase
+      .from('card_github_links')
+      .update({
+        github_state,
+        synced_at: new Date().toISOString()
+      })
+      .eq('id', linkId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    const { data: allCardLinks } = await supabase
+      .from('card_github_links')
+      .select('github_state')
+      .eq('card_id', cardId)
+
+    if (allCardLinks && allCardLinks.length > 0) {
+      const allIssuesClosed = allCardLinks.every((l: any) => l.github_state === 'closed')
+
+      await supabase
+        .from('cards')
+        .update({
+          is_completed: allIssuesClosed,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', cardId)
+
+      console.log(`Card ${cardId} updated: ${allIssuesClosed ? 'completed' : 'incomplete'} (${allCardLinks.length} issues)`)
+    }
+
+    return NextResponse.json(data)
+  } catch (error: any) {
+    console.error('Error updating GitHub link:', error)
+    return NextResponse.json(
+      { error: error.message || 'Failed to update GitHub link' },
+      { status: 500 }
+    )
+  }
+}
