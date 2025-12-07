@@ -9,9 +9,10 @@ import './GitHubPowerUp.css'
 interface GitHubPowerUpProps {
   cardId: string
   onClose: () => void
+  onUpdate?: () => void
 }
 
-export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
+export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPowerUpProps) {
   const { t } = useLanguage()
   const [connected, setConnected] = useState(false)
   const [hasRepoScope, setHasRepoScope] = useState(false)
@@ -392,6 +393,7 @@ export default function GitHubPowerUp({ cardId, onClose }: GitHubPowerUpProps) {
         }
 
         await fetchLinkedIssues()
+        onUpdate?.()
       } else {
         const error = await response.json()
         alert(`Erreur: ${error.message || 'Impossible de modifier l\'issue'}`)

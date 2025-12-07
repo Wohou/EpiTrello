@@ -767,6 +767,7 @@ export default function CardItem({ card, onDelete, onUpdate, isSharedBoard = fal
         <GitHubPowerUp
           cardId={card.id}
           onClose={() => setShowGitHubPowerUp(false)}
+          onUpdate={() => onUpdate({})}
         />
       )}
     </div>
