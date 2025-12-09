@@ -3,10 +3,13 @@ import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 import { updateCardCompletion } from '@/lib/github-utils'
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Helper to create Supabase client with service role (only at runtime)
+function getSupabaseAdmin() {
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+}
 
 function verifyGitHubSignature(payload: string, signature: string): boolean {
     const secret = process.env.GITHUB_WEBHOOK_SECRET
@@ -22,6 +25,7 @@ function verifyGitHubSignature(payload: string, signature: string): boolean {
 }
 
 async function handleIssueEvent(payload: any) {
+    const supabase = getSupabaseAdmin()
     const { action, issue, repository } = payload
 
     if (!['opened', 'closed', 'reopened'].includes(action)) {
