@@ -22,10 +22,6 @@ jobs:
           cat > .env << EOF
           NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
-          GITHUB_WEBHOOK_SECRET=${{ secrets.GITHUB_WEBHOOK_SECRET }}
-          NEXT_PUBLIC_GITHUB_WEBHOOK_SECRET=${{ secrets.GITHUB_WEBHOOK_SECRET }}
           EOF
 
       - name: Set up Docker Buildx
@@ -37,17 +33,8 @@ jobs:
       - name: Start services
         run: docker compose up -d
 
-      - name: Wait for application to be ready
-        run: |
-          echo "Waiting for application to start..."
-          timeout 60 bash -c 'until curl -f http://localhost:3000 > /dev/null 2>&1; do sleep 2; done' || true
-
       - name: Check running containers
         run: docker compose ps
-
-      - name: Check application logs
-        if: failure()
-        run: docker compose logs
 
       - name: Stop services
         run: docker compose down
