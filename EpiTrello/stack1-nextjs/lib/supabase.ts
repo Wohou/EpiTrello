@@ -100,6 +100,61 @@ export interface Card {
   last_modified_by_username?: string
 }
 
+export interface Profile {
+  id: string
+  username: string | null
+  avatar_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CardGitHubLink {
+  id: string
+  card_id: string
+  github_type: 'issue' | 'pull_request'
+  github_repo_owner: string
+  github_repo_name: string
+  github_number: number
+  github_url: string
+  github_title: string | null
+  github_state: string | null
+  synced_at: string
+  created_by: string
+  created_at: string
+}
+
+export interface GitHubRepo {
+  id: number
+  name: string
+  full_name: string
+  owner: {
+    login: string
+    avatar_url: string
+  }
+  description: string | null
+  private: boolean
+  html_url: string
+}
+
+export interface GitHubIssue {
+  id: number
+  number: number
+  title: string
+  state: 'open' | 'closed'
+  html_url: string
+  body: string | null
+  user: {
+    login: string
+    avatar_url: string
+  }
+  created_at: string
+  updated_at: string
+  labels: Array<{
+    name: string
+    color: string
+  }>
+}
+
 // Extended types with relations
 export interface BoardWithLists extends Board {
   lists: ListWithCards[]

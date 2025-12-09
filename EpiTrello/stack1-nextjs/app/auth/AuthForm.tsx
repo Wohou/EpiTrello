@@ -87,6 +87,7 @@ export default function AuthForm() {
       const { error } = await supabaseBrowser.auth.signInWithOAuth({
         provider,
         options: {
+          scopes: provider === 'github' ? 'user: email repo' : undefined,
           redirectTo: `${window.location.origin}/auth/callback`,
         },
       })
