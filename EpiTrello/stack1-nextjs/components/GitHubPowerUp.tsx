@@ -16,11 +16,11 @@ interface GitHubPowerUpProps {
 export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPowerUpProps) {
   const { t } = useLanguage()
   const [connected, setConnected] = useState(false)
-  const [hasRepoScope, setHasRepoScope] = useState(false)
+  const [, setHasRepoScope] = useState(false)
   const [githubUsername, setGithubUsername] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<'main' | 'link' | 'create'>('main')
-  
+
   // Link existing issue
   const [repos, setRepos] = useState<GitHubRepo[]>([])
   const [selectedRepo, setSelectedRepo] = useState<string>('')
@@ -28,16 +28,16 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
   const [selectedIssue, setSelectedIssue] = useState<number | null>(null)
   const [loadingRepos, setLoadingRepos] = useState(false)
   const [loadingIssues, setLoadingIssues] = useState(false)
-  
+
   // Create new issue
   const [issueTitle, setIssueTitle] = useState('')
   const [issueDescription, setIssueDescription] = useState('')
   const [creating, setCreating] = useState(false)
-  
+
   // Linked issues
   const [linkedIssues, setLinkedIssues] = useState<CardGitHubLink[]>([])
   const [loadingLinks, setLoadingLinks] = useState(false)
-  
+
   // Realtime subscription
   const channelRef = useRef<RealtimeChannel | null>(null)
 
@@ -228,7 +228,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
 
       if (response.ok) {
         const data = await response.json()
-        const filteredIssues = data.filter((issue: any) => !issue.pull_request)
+        const filteredIssues = data.filter((issue: { pull_request?: unknown }) => !issue.pull_request)
         setIssues(filteredIssues)
       }
     } catch (error) {
@@ -274,7 +274,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       if (response.ok) {
         const result = await response.json()
         await fetchLinkedIssues()
-        
+
         if (result.webhook) {
           if (result.webhook.created) {
             console.log('✅ Webhook créé automatiquement pour la synchronisation bidirectionnelle')
@@ -284,7 +284,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
             console.log('⚠️ Pas de droits admin - synchronisation manuelle uniquement')
           }
         }
-        
+
         setView('main')
         setSelectedRepo('')
         setSelectedIssue(null)
@@ -356,7 +356,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       if (linkResponse.ok) {
         const result = await linkResponse.json()
         await fetchLinkedIssues()
-        
+
         if (result.webhook) {
           if (result.webhook.created) {
             console.log('✅ Webhook créé automatiquement pour la synchronisation bidirectionnelle')
@@ -364,7 +364,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
             console.log('ℹ️ Webhook déjà configuré - synchronisation bidirectionnelle active')
           }
         }
-        
+
         setView('main')
         setSelectedRepo('')
         setIssueTitle('')
@@ -401,11 +401,11 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
   const handleToggleIssueState = async (link: CardGitHubLink) => {
     const newState = link.github_state === 'open' ? 'closed' : 'open'
     const action = newState === 'closed' ? 'fermer' : 'rouvrir'
-    
+
     if (!confirm(`Voulez-vous ${action} l'issue #${link.github_number} sur GitHub ?`)) return
 
-    setLinkedIssues(prev => 
-      prev.map(issue => 
+    setLinkedIssues(prev =>
+      prev.map(issue =>
         issue.id === link.id
           ? { ...issue, github_state: newState }
           : issue
@@ -495,7 +495,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
           </div>
 
           <div className="github-actions">
-            <button 
+            <button
               className="github-action-btn primary"
               onClick={() => {
                 setView('link')
@@ -504,7 +504,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
             >
               🔗 {t.github.linkIssue}
             </button>
-            <button 
+            <button
               className="github-action-btn"
               onClick={() => {
                   setView('create')
@@ -529,12 +529,12 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
                       <span className={`issue-badge ${link.github_state}`}>
                         {link.github_type === 'pull_request' ? '↗️' : '⚫'} #{link.github_number}
                       </span>
-                      <button 
+                      <button
                         className={`issue-state-toggle ${link.github_state}`}
                         onClick={() => handleToggleIssueState(link)}
                         title={link.github_state === 'open' ? 'Cliquer pour fermer' : 'Cliquer pour rouvrir'}
                       >
-                        {link.github_state === 'open' 
+                        {link.github_state === 'open'
                           ? (t.github.openIssue || 'Ouvert')
                           : (t.github.closedIssue || 'Fermé')}
                         <span className="toggle-icon">
@@ -545,15 +545,15 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
                     <div className="issue-title">{link.github_title}</div>
                     <div className="issue-repo">{link.github_repo_owner}/{link.github_repo_name}</div>
                     <div className="issue-actions">
-                      <a 
-                        href={link.github_url} 
-                        target="_blank" 
+                      <a
+                        href={link.github_url}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="issue-link-btn"
                       >
                         {t.github.viewOnGitHub} ↗
                       </a>
-                      <button 
+                      <button
                         className="issue-unlink-btn"
                         onClick={() => handleUnlink(link.id)}
                       >
@@ -582,15 +582,15 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       <div className="github-form">
         <div className="form-group">
           <label>{t.github.selectRepository}</label>
-          <select 
+          <select
             value={selectedRepo}
             onChange={(e) => handleRepoChange(e.target.value)}
             disabled={loadingRepos}
           >
             <option value="">
-              {loadingRepos 
+              {loadingRepos
                 ? t.github.loadingRepos
-                : (repos.length === 0 
+                : (repos.length === 0
                     ? t.github.noRepos
                     : '-- Select a repository --')}
             </option>
@@ -605,15 +605,15 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
         {selectedRepo && (
           <div className="form-group">
             <label>{t.github.selectIssue}</label>
-            <select 
+            <select
               value={selectedIssue || ''}
               onChange={(e) => setSelectedIssue(Number(e.target.value))}
               disabled={loadingIssues}
             >
               <option value="">
-                {loadingIssues 
+                {loadingIssues
                   ? t.github.loadingIssues
-                  : (issues.length === 0 
+                  : (issues.length === 0
                       ? t.github.noIssues
                       : '-- Select an issue --')}
               </option>
@@ -626,7 +626,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
           </div>
         )}
 
-        <button 
+        <button
           className="github-submit-btn"
           onClick={handleLinkExisting}
           disabled={!selectedRepo || selectedIssue === null}
@@ -649,15 +649,15 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       <div className="github-form">
         <div className="form-group">
           <label>{t.github.selectRepository}</label>
-          <select 
+          <select
             value={selectedRepo}
             onChange={(e) => setSelectedRepo(e.target.value)}
             disabled={loadingRepos}
           >
             <option value="">
-              {loadingRepos 
+              {loadingRepos
                 ? t.github.loadingRepos
-                : (repos.length === 0 
+                : (repos.length === 0
                     ? t.github.noRepos
                     : '-- Select a repository --')}
             </option>
@@ -673,7 +673,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
           <>
             <div className="form-group">
               <label>{t.github.issueTitle}</label>
-              <input 
+              <input
                 type="text"
                 value={issueTitle}
                 onChange={(e) => setIssueTitle(e.target.value)}
@@ -683,7 +683,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
 
             <div className="form-group">
               <label>{t.github.issueDescription}</label>
-              <textarea 
+              <textarea
                 value={issueDescription}
                 onChange={(e) => setIssueDescription(e.target.value)}
                 placeholder="Enter issue description..."
@@ -693,12 +693,12 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
           </>
         )}
 
-        <button 
+        <button
           className="github-submit-btn"
           onClick={handleCreateIssue}
           disabled={!selectedRepo || !issueTitle.trim() || creating}
         >
-          {creating 
+          {creating
             ? t.github.creatingIssue
             : t.github.createAndLink}
         </button>
@@ -721,7 +721,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
     <div className="github-powerup-overlay" onClick={onClose}>
       <div className="github-powerup-modal" onClick={(e) => e.stopPropagation()}>
         <button className="github-close-btn" onClick={onClose}>✕</button>
-        
+
         {view === 'main' && renderMainView()}
         {view === 'link' && renderLinkView()}
         {view === 'create' && renderCreateView()}

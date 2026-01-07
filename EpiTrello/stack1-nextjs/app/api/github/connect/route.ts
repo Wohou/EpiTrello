@@ -1,14 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { requireAuth, getGitHubIdentity, getGitHubToken } from '@/lib/api-utils'
 
 // Verify GitHub connection and get provider token
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    const { user, error } = await requireAuth(supabase)
+    const {error } = await requireAuth(supabase)
     if (error) return error
 
     const githubIdentity = await getGitHubIdentity(supabase)
@@ -51,10 +51,11 @@ export async function POST(request: NextRequest) {
       hasToken: true,
       hasRepoScope,
     })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error connecting GitHub:', error)
+    const message = error instanceof Error ? error.message : 'Failed to connect GitHub'
     return NextResponse.json(
-      { error: error.message || 'Failed to connect GitHub' },
+      { error: message },
       { status: 500 }
     )
   }
@@ -91,10 +92,11 @@ export async function DELETE() {
     }
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error disconnecting GitHub:', error)
+    const message = error instanceof Error ? error.message : 'Failed to disconnect GitHub'
     return NextResponse.json(
-      { error: error.message || 'Failed to disconnect GitHub' },
+      { error: message },
       { status: 500 }
     )
   }
@@ -144,10 +146,11 @@ export async function GET() {
       connected_at: profile?.github_connected_at,
       hasRepoScope,
     })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error getting GitHub status:', error)
+    const message = error instanceof Error ? error.message : 'Failed to get GitHub status'
     return NextResponse.json(
-      { error: error.message || 'Failed to get GitHub status' },
+      { error: message },
       { status: 500 }
     )
   }

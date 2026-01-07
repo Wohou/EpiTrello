@@ -20,8 +20,9 @@ export async function PUT(request: Request) {
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     console.error('Error reordering lists:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to reorder lists'
     return NextResponse.json(
-      { error: error.message || 'Failed to reorder lists' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

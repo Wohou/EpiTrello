@@ -94,8 +94,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ url: publicUrl })
   } catch (error: unknown) {
     console.error('Error uploading card image:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to upload image'
     return NextResponse.json(
-      { error: error.message || 'Failed to upload image' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

@@ -63,7 +63,8 @@ export default function BoardManageMenu({
         setShowInviteModal(false)
       }, 2000)
     } catch (err: unknown) {
-      setError(err.message || t.sharing?.inviteError || 'Erreur lors de l\'invitation')
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      setError(errorMessage || t.sharing?.inviteError || 'Erreur lors de l\'invitation')
     } finally {
       setInviting(false)
     }
@@ -76,7 +77,8 @@ export default function BoardManageMenu({
         await onRevokeMember(userId)
         onRefreshMembers()
       } catch (err: unknown) {
-        setError(err.message || t.sharing?.revokeError || 'Erreur lors de la révocation')
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        setError(errorMessage || t.sharing?.revokeError || 'Erreur lors de la révocation')
       }
     }
   }
@@ -86,7 +88,8 @@ export default function BoardManageMenu({
       try {
         await onLeaveBoard()
       } catch (err: unknown) {
-        setError(err.message || t.sharing?.leaveError || 'Erreur lors du départ')
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        setError(errorMessage || t.sharing?.leaveError || 'Erreur lors du départ')
       }
     }
   }

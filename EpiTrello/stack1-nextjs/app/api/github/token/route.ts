@@ -28,10 +28,11 @@ export async function GET() {
             token,
             username: user.user_metadata?.user_name,
         })
-    } catch (error: any) {
+    } catch (error) {
         console.error('Error getting GitHub token:', error)
+        const message = error instanceof Error ? error.message : 'Failed to get token'
         return NextResponse.json(
-            { error: error.message || 'Failed to get token' },
+            { error: message },
             { status: 500 }
         )
     }

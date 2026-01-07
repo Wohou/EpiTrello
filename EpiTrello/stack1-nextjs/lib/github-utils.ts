@@ -28,7 +28,7 @@ export async function updateCardCompletion(
             return false
         }
 
-        const allClosed = allLinks.every((l: any) => l.github_state === 'closed')
+        const allClosed = allLinks.every((l: { github_state: string }) => l.github_state === 'closed')
 
         const { error: updateError } = await supabase
             .from('cards')

@@ -3,6 +3,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { updateCardCompletion } from '@/lib/github-utils'
 import { requireAuth, getGitHubToken } from '@/lib/api-utils'
+import { SupabaseClient } from '@supabase/supabase-js'
 
 // Function to create webhook if it doesn't exist
 async function ensureWebhookExists(
@@ -10,7 +11,7 @@ async function ensureWebhookExists(
   repoName: string,
   token: string,
   userId: string,
-  supabase: any
+  supabase: SupabaseClient
 ) {
   try {
     const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/github`
@@ -39,7 +40,7 @@ async function ensureWebhookExists(
 
     if (listResponse.ok) {
       const hooks = await listResponse.json()
-      const existingHook = hooks.find((hook: any) =>
+      const existingHook = hooks.find((hook: { id: number; config?: { url?: string } }) =>
         hook.config?.url === webhookUrl
       )
 
@@ -90,7 +91,7 @@ async function ensureWebhookExists(
 
     if (createResponse.status === 422) {
       const errorData = await createResponse.json()
-      if (errorData.errors?.some((e: any) => e.message?.includes('already exists'))) {
+      if (errorData.errors?.some((e: { message?: string }) => e.message?.includes('already exists'))) {
         return { created: false, reason: 'already_exists' }
       }
       return { created: false, reason: 'validation_error', details: errorData }
@@ -131,7 +132,7 @@ export async function GET(
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    const { user, error: authError } = await requireAuth(supabase)
+    const {error: authError } = await requireAuth(supabase)
     if (authError) return authError
 
     const cardId = params.id
@@ -145,10 +146,11 @@ export async function GET(
     if (error) throw error
 
     return NextResponse.json(links || [])
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching GitHub links:', error)
+    const message = error instanceof Error ? error.message : 'Failed to fetch GitHub links'
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch GitHub links' },
+      { error: message },
       { status: 500 }
     )
   }
@@ -248,10 +250,11 @@ export async function POST(
       ...data,
       webhook: webhookResult
     }, { status: 201 })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating GitHub link:', error)
+    const message = error instanceof Error ? error.message : 'Failed to create GitHub link'
     return NextResponse.json(
-      { error: error.message || 'Failed to create GitHub link' },
+      { error: message },
       { status: 500 }
     )
   }
@@ -290,10 +293,11 @@ export async function DELETE(
     await updateCardCompletion(supabase, cardId)
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error deleting GitHub link:', error)
+    const message = error instanceof Error ? error.message : 'Failed to delete GitHub link'
     return NextResponse.json(
-      { error: error.message || 'Failed to delete GitHub link' },
+      { error: message },
       { status: 500 }
     )
   }
@@ -307,7 +311,7 @@ export async function PATCH(
   try {
     const supabase = createRouteHandlerClient({ cookies })
 
-    const { user, error: authError } = await requireAuth(supabase)
+    const {error: authError } = await requireAuth(supabase)
     if (authError) return authError
 
     const cardId = params.id
@@ -336,10 +340,11 @@ export async function PATCH(
     await updateCardCompletion(supabase, cardId)
 
     return NextResponse.json(data)
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating GitHub link:', error)
+    const message = error instanceof Error ? error.message : 'Failed to update GitHub link'
     return NextResponse.json(
-      { error: error.message || 'Failed to update GitHub link' },
+      { error: message },
       { status: 500 }
     )
   }

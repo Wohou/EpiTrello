@@ -24,7 +24,13 @@ function verifyGitHubSignature(payload: string, signature: string): boolean {
     )
 }
 
-async function handleIssueEvent(payload: any) {
+interface GitHubWebhookPayload {
+    action: string
+    issue: { number: number; state: string }
+    repository: { owner: { login: string }; name: string }
+}
+
+async function handleIssueEvent(payload: GitHubWebhookPayload) {
     const supabase = getSupabaseAdmin()
     const { action, issue, repository } = payload
 
@@ -123,10 +129,11 @@ export async function POST(request: NextRequest) {
             event
         })
 
-    } catch (error: any) {
+    } catch (error) {
         console.error('Error processing webhook:', error)
+        const message = error instanceof Error ? error.message : 'Internal server error'
         return NextResponse.json(
-            { error: error.message || 'Internal server error' },
+            { error: message },
             { status: 500 }
         )
     }

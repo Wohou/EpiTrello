@@ -73,7 +73,8 @@ export default function AuthForm() {
         }
       }
     } catch (err: unknown) {
-      setError(err.message || t.auth.authError)
+      const errorMessage = err instanceof Error ? err.message : t.auth.authError
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -94,9 +95,9 @@ export default function AuthForm() {
 
       if (error) throw error
       // OAuth will redirect to provider's login page
-      // After successful login, will redirect to /auth/callback
     } catch (err: unknown) {
-      setError(err.message || t.auth.oauthError)
+      const errorMessage = err instanceof Error ? err.message : t.auth.oauthError
+      setError(errorMessage)
       setLoading(false)
     }
   }

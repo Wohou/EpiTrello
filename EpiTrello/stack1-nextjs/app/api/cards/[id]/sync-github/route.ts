@@ -89,8 +89,9 @@ export async function POST(request: NextRequest) {
                     errors.push(`Issue #${link.github_number}: ${errorData.message || 'Update failed'}`)
                     console.error(`Failed to update issue #${link.github_number}:`, errorData)
                 }
-            } catch (error: any) {
-                errors.push(`Issue #${link.github_number}: ${error.message}`)
+            } catch (error) {
+                const message = error instanceof Error ? error.message : 'Unknown error'
+                errors.push(`Issue #${link.github_number}: ${message}`)
                 console.error(`Error updating issue #${link.github_number}:`, error)
             }
         }
@@ -101,10 +102,11 @@ export async function POST(request: NextRequest) {
             total: links.length,
             errors: errors.length > 0 ? errors : undefined
         })
-    } catch (error: any) {
+    } catch (error) {
         console.error('Error syncing card to GitHub:', error)
+        const message = error instanceof Error ? error.message : 'Failed to sync to GitHub'
         return NextResponse.json(
-            { error: error.message || 'Failed to sync to GitHub' },
+            { error: message },
             { status: 500 }
         )
     }

@@ -77,7 +77,7 @@ export default function SettingsPage() {
       setMessage({ type: 'success', text: t.settings.profileUpdated })
     } catch (error: unknown) {
       console.error('Error updating profile:', error)
-      setMessage({ type: 'error', text: error.message || t.settings.updateError })
+      setMessage({ type: 'error', text: (error instanceof Error ? error.message : String(error)) || t.settings.updateError })
     } finally {
       setSaving(false)
     }
@@ -142,7 +142,7 @@ export default function SettingsPage() {
       setMessage({ type: 'success', text: t.settings.photoUpdated })
     } catch (error: unknown) {
       console.error('Error uploading avatar:', error)
-      setMessage({ type: 'error', text: error.message || t.settings.uploadError })
+      setMessage({ type: 'error', text: (error instanceof Error ? error.message : String(error)) || t.settings.uploadError })
     } finally {
       setUploading(false)
     }
@@ -163,7 +163,7 @@ export default function SettingsPage() {
       setMessage({ type: 'success', text: t.settings.photoRemoved })
     } catch (error: unknown) {
       console.error('Error removing avatar:', error)
-      setMessage({ type: 'error', text: error.message || t.settings.removeError })
+      setMessage({ type: 'error', text: (error instanceof Error ? error.message : String(error)) || t.settings.removeError })
     } finally {
       setUploading(false)
     }

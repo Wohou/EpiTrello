@@ -27,7 +27,7 @@ export async function requireAuth(supabase: SupabaseClient) {
 export async function getGitHubIdentity(supabase: SupabaseClient) {
     const { data: identitiesData } = await supabase.auth.getUserIdentities()
     const identities = identitiesData?.identities ?? []
-    return identities.find((identity: any) => identity.provider === 'github')
+    return identities.find((identity: { provider: string }) => identity.provider === 'github')
 }
 
 /**
