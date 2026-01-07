@@ -33,7 +33,7 @@ export async function GET() {
     if (error) throw error
 
     // Get inviter usernames from auth.users metadata
-    const inviterIds = [...new Set(invitations?.map(inv => inv.inviter_id) || [])]
+    // const inviterIds = [...new Set(invitations?.map(inv => inv.inviter_id) || [])]
 
     const enrichedInvitations = await Promise.all(
       (invitations || []).map(async (invitation) => {

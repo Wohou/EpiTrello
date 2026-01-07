@@ -31,7 +31,7 @@ export async function GET() {
       .select('board_id, role')
       .eq('user_id', user.id)
 
-    let sharedBoards: any[] = []
+    let sharedBoards: unknown[] = []
     if (!memberError && memberRecords && memberRecords.length > 0) {
       // Filter out owner role and get board IDs
       const sharedMemberships = memberRecords.filter(m => m.role !== 'owner')

@@ -18,7 +18,7 @@ export async function PUT(request: Request) {
     await Promise.all(updates)
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error reordering cards:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to reorder cards' },

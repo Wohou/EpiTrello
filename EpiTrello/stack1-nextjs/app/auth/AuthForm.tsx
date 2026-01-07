@@ -72,7 +72,7 @@ export default function AuthForm() {
           }, 100)
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || t.auth.authError)
     } finally {
       setLoading(false)
@@ -94,7 +94,7 @@ export default function AuthForm() {
       if (error) throw error
       // OAuth will redirect to provider's login page
       // After successful login, will redirect to /auth/callback
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || t.auth.oauthError)
       setLoading(false)
     }

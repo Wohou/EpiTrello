@@ -57,7 +57,7 @@ export default function AuthForm() {
           router.push('/boards')
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'An error occurred during authentication')
     } finally {
       setLoading(false)
@@ -69,7 +69,7 @@ export default function AuthForm() {
     setError(null)
 
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const {error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/boards`,
@@ -77,7 +77,7 @@ export default function AuthForm() {
       })
 
       if (error) throw error
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'An error occurred during OAuth sign in')
       setLoading(false)
     }

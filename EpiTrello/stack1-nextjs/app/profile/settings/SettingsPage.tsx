@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { themes, type ThemeKey } from '@/lib/themes'
 import { useTheme } from '@/lib/theme-context'
-import { useLanguage, type Language } from '@/lib/language-context'
+import { useLanguage} from '@/lib/language-context'
 import './SettingsPage.css'
 
 export default function SettingsPage() {
@@ -75,7 +75,7 @@ export default function SettingsPage() {
       // Update local state with trimmed username
       setUsername(trimmedUsername)
       setMessage({ type: 'success', text: t.settings.profileUpdated })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating profile:', error)
       setMessage({ type: 'error', text: error.message || t.settings.updateError })
     } finally {
@@ -140,7 +140,7 @@ export default function SettingsPage() {
 
       setAvatarUrl(publicUrl)
       setMessage({ type: 'success', text: t.settings.photoUpdated })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error uploading avatar:', error)
       setMessage({ type: 'error', text: error.message || t.settings.uploadError })
     } finally {
@@ -161,7 +161,7 @@ export default function SettingsPage() {
 
       setAvatarUrl(null)
       setMessage({ type: 'success', text: t.settings.photoRemoved })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error removing avatar:', error)
       setMessage({ type: 'error', text: error.message || t.settings.removeError })
     } finally {

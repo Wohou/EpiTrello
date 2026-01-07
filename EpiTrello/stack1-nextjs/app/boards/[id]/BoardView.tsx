@@ -7,7 +7,7 @@ import { supabaseBrowser } from '@/lib/supabase-browser'
 import ListColumn from '@/components/ListColumn'
 import CreateListButton from '@/components/CreateListButton'
 import BoardManageMenu from '@/components/BoardManageMenu'
-import type { BoardWithLists, List, Card, BoardMember } from '@/lib/supabase'
+import type { BoardWithLists, Card, BoardMember } from '@/lib/supabase'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import './BoardView.css'
 
@@ -22,7 +22,6 @@ export default function BoardView({ boardId }: BoardViewProps) {
   const [editingDescription, setEditingDescription] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
   const [tempDescription, setTempDescription] = useState('')
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [isOwner, setIsOwner] = useState(false)
   const [isSharedBoard, setIsSharedBoard] = useState(false)
   const [members, setMembers] = useState<BoardMember[]>([])
@@ -63,9 +62,9 @@ export default function BoardView({ boardId }: BoardViewProps) {
   }, [fetchBoardData])
 
   // Mark that we just made a local change
-  const markLocalChange = useCallback(() => {
-    lastLocalChangeRef.current = Date.now()
-  }, [])
+  // const markLocalChange = useCallback(() => {
+  //   lastLocalChangeRef.current = Date.now()
+  // }, [])
 
   useEffect(() => {
     fetchCurrentUser()
@@ -139,12 +138,9 @@ export default function BoardView({ boardId }: BoardViewProps) {
   }, [boardId, debouncedFetchBoardData])
 
   const fetchCurrentUser = async () => {
-    const { data: { user } } = await supabaseBrowser.auth.getUser()
-    if (user) {
-      setCurrentUserId(user.id)
-    }
+    await supabaseBrowser.auth.getUser()
+    // User fetched for auth validation
   }
-
   const fetchBoard = async () => {
     try {
       const response = await fetch(`/api/boards/${boardId}`)

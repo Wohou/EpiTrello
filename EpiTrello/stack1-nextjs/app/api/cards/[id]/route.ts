@@ -58,7 +58,7 @@ export async function PUT(
     const { title, description, position, list_id, cover_color, cover_image, is_completed, start_date, due_date } = body
 
     // Build update object with only provided fields
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       last_modified_by: user.id,
       updated_at: new Date().toISOString()
     }

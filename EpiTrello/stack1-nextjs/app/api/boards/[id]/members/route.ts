@@ -97,7 +97,7 @@ export async function DELETE(
 
     const boardId = params.id
     const { searchParams } = new URL(request.url)
-    const memberId = searchParams.get('memberId')
+    // const memberId = searchParams.get('memberId')
     const userId = searchParams.get('userId')
 
     // Get board info

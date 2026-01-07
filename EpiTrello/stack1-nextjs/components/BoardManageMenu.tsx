@@ -16,7 +16,6 @@ interface BoardManageMenuProps {
 }
 
 export default function BoardManageMenu({
-  boardId,
   isOwner,
   members,
   onInvite,
@@ -63,7 +62,7 @@ export default function BoardManageMenu({
         setSuccess(null)
         setShowInviteModal(false)
       }, 2000)
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || t.sharing?.inviteError || 'Erreur lors de l\'invitation')
     } finally {
       setInviting(false)
@@ -76,7 +75,7 @@ export default function BoardManageMenu({
       try {
         await onRevokeMember(userId)
         onRefreshMembers()
-      } catch (err: any) {
+      } catch (err: unknown) {
         setError(err.message || t.sharing?.revokeError || 'Erreur lors de la révocation')
       }
     }
@@ -86,7 +85,7 @@ export default function BoardManageMenu({
     if (confirm(t.sharing?.leaveConfirm || 'Êtes-vous sûr de vouloir quitter ce board ?')) {
       try {
         await onLeaveBoard()
-      } catch (err: any) {
+      } catch (err: unknown) {
         setError(err.message || t.sharing?.leaveError || 'Erreur lors du départ')
       }
     }

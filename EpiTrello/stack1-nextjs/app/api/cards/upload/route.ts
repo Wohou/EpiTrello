@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     // Update card with image URL
     const { error: updateError } = await supabase
       .from('cards')
-      .update({ 
+      .update({
         cover_image: publicUrl,
         cover_color: null, // Remove color when adding image
         updated_at: new Date().toISOString()
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ url: publicUrl })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error uploading card image:', error)
     return NextResponse.json(
       { error: error.message || 'Failed to upload image' },

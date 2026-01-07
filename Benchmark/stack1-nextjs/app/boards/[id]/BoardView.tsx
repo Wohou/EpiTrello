@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import ListColumn from '@/components/ListColumn'
 import CreateListButton from '@/components/CreateListButton'
-import type { BoardWithLists, List, Card } from '@/lib/supabase'
+import type { BoardWithLists, Card } from '@/lib/supabase'
 import './BoardView.css'
 
 interface BoardViewProps {

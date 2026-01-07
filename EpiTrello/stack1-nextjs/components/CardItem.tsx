@@ -85,7 +85,7 @@ const generateGoogleCalendarUrl = (
   return `https://calendar.google.com/calendar/render?${params.toString()}`
 }
 
-export default function CardItem({ card, onDelete, onUpdate, isSharedBoard = false }: CardItemProps) {
+export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [title, setTitle] = useState(card.title)
   const [description, setDescription] = useState(card.description || '')
