@@ -43,6 +43,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
       const response = await fetch(`/api/boards/${boardId}`)
       if (response.ok) {
         const data = await response.json()
+        console.log('Fetched board data:', data)
         setBoard(data)
         console.log('Board data refreshed from realtime')
       }
@@ -102,6 +103,18 @@ export default function BoardView({ boardId }: BoardViewProps) {
       .on(
         'postgres_changes',
         {
+          event: '*',
+          schema: 'public',
+          table: 'card_github_links'
+        },
+        (payload) => {
+          console.log('Realtime: GitHub links changed', payload)
+          debouncedFetchBoardData()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
           event: 'UPDATE',
           schema: 'public',
           table: 'boards',
@@ -121,7 +134,10 @@ export default function BoardView({ boardId }: BoardViewProps) {
         }
       )
       .subscribe((status: string) => {
-        console.log('Realtime status:', status)
+        console.log('📡 Realtime status:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Realtime connected - listening for card_github_links changes')
+        }
       })
 
     channelRef.current = channel
