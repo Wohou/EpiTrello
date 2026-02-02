@@ -6,6 +6,20 @@ import { defineConfig } from "eslint/config";
 
 export default defineConfig([
   {
+    ignores: [
+      "**/node_modules/",
+      "**/.next/",
+      "**/out/",
+      "**/build/",
+      "**/dist/",
+      "**/coverage/",
+      "**/.env.*",
+      "**/.vscode/",
+      "**/.idea/",
+      "**/*.log"
+    ]
+  },
+  {
     files: ["**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
     plugins: { js, "react/jsx-runtime": pluginReact },
     extends: ["js/recommended"],

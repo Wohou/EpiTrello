@@ -34,7 +34,10 @@ export default function CreateListButton({ onCreate }: CreateListButtonProps) {
           <button className="add-button" onClick={handleCreate}>
             Add List
           </button>
-          <button className="cancel-button" onClick={() => setIsAdding(false)}>
+          <button className="cancel-button" onClick={() => {
+            setTitle('')
+            setIsAdding(false)
+          }}>
             ×
           </button>
         </div>

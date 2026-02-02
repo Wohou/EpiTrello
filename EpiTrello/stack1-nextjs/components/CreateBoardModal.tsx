@@ -18,6 +18,8 @@ export default function CreateBoardModal({ onClose, onCreate }: CreateBoardModal
     e.preventDefault()
     if (title.trim()) {
       onCreate(title, description)
+      setTitle('')
+      setDescription('')
     }
   }
 
