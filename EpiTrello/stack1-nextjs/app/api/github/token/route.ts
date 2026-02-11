@@ -3,6 +3,8 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { requireAuth, getGitHubToken } from '@/lib/api-utils'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/github/token
  * Returns the GitHub provider token from the user's session
