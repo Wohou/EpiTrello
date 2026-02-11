@@ -206,6 +206,7 @@ async function main() {
     // --- OWASP ZAP ---
     // On Windows/macOS Docker Desktop, --network host doesn't work.
     // Use host.docker.internal to reach the host's localhost.
+    // Pour la CI !
     const zapTarget = isWindows || os.platform() === 'darwin'
       ? 'http://host.docker.internal:3000'
       : 'http://localhost:3000';
