@@ -1,12 +1,27 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import CreateListButton from '../components/CreateListButton'
+import { useLanguage } from '../lib/language-context'
+
+// Mock the language context to avoid importing supabase-browser -> jose (ESM)
+jest.mock('../lib/language-context', () => ({
+  useLanguage: jest.fn(),
+}))
 
 describe('CreateListButton', () => {
   let mockOnCreate: jest.Mock
 
+  const mockTranslations = {
+    lists: {
+      addAnotherList: 'Add another list',
+      enterListTitle: 'Enter list title',
+      createList: 'Add list',
+    },
+  }
+
   beforeEach(() => {
     mockOnCreate = jest.fn()
+    ;(useLanguage as jest.Mock).mockReturnValue({ t: mockTranslations })
   })
 
   describe('Initial render', () => {

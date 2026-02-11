@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/lib/language-context'
+import { useNotification } from '@/components/NotificationContext'
 import './auth.css'
 
 export default function AuthForm() {
@@ -15,6 +16,7 @@ export default function AuthForm() {
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const { t } = useLanguage()
+  const { alert } = useNotification()
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,7 +44,7 @@ export default function AuthForm() {
           if (data.user.identities && data.user.identities.length === 0) {
             setError(t.auth.emailExists)
           } else {
-            alert(t.auth.checkEmail)
+            await alert({ message: t.auth.checkEmail, variant: 'success', title: '✉️ Email envoyé' })
             setIsSignUp(false)
           }
         }

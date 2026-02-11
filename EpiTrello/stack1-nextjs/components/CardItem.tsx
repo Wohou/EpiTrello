@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect, ChangeEvent } from 'react'
+import Image from 'next/image'
 import { useLanguage } from '@/lib/language-context'
+import { useNotification } from '@/components/NotificationContext'
 import type { Card } from '@/lib/supabase'
 import GitHubPowerUp from './GitHubPowerUp'
 import './CardItem.css'
@@ -107,6 +109,7 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
   const buttonRef = useRef<HTMLButtonElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { t } = useLanguage()
+  const { confirm, alert } = useNotification()
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -134,8 +137,15 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
     setIsEditing(false)
   }
 
-  const handleDelete = () => {
-    if (confirm(t.cards.deleteConfirm || 'Are you sure you want to delete this card?')) {
+  const handleDelete = async () => {
+    const confirmed = await confirm({
+      title: t.cards.deleteCard,
+      message: t.cards.deleteConfirm || 'Are you sure you want to delete this card?',
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
+      variant: 'danger',
+    })
+    if (confirmed) {
       onDelete()
       setShowMenu(false)
     }
@@ -152,12 +162,12 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
     if (!file) return
 
     if (!file.type.startsWith('image/')) {
-      alert('Veuillez sélectionner une image')
+      await alert({ message: t.settings?.selectImage || 'Veuillez sélectionner une image', variant: 'error' })
       return
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('L\'image doit faire moins de 5MB')
+      await alert({ message: t.settings?.imageSize || 'L\'image doit faire moins de 5MB', variant: 'error' })
       return
     }
 
@@ -181,7 +191,7 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
       setShowMenu(false)
     } catch (error) {
       console.error('Error uploading image:', error)
-      alert('Erreur lors de l\'upload de l\'image')
+      await alert({ message: t.settings?.uploadError || 'Erreur lors de l\'upload de l\'image', variant: 'error' })
     } finally {
       setUploading(false)
       if (fileInputRef.current) {
@@ -369,21 +379,21 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Card title"
+          placeholder={t.cards.titlePlaceholder}
           autoFocus
         />
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Description"
+          placeholder={t.cards.cardDescription}
           rows={3}
         />
         <div className="card-actions">
           <button className="save-button" onClick={handleSave}>
-            Save
+            {t.common.save}
           </button>
           <button className="cancel-button" onClick={handleCancel}>
-            Cancel
+            {t.common.cancel}
           </button>
         </div>
       </div>
@@ -397,14 +407,14 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
       )}
       {card.cover_image && (
         <div className="card-cover-image">
-          <img src={card.cover_image} alt="Cover" />
+          <Image src={card.cover_image} alt="Cover" width={300} height={160} style={{ width: '100%', height: 'auto' }} />
         </div>
       )}
       <div className="card-content">
         <button
           className={`card-checkbox ${card.is_completed ? 'checked' : ''}`}
           onClick={handleToggleComplete}
-          title={card.is_completed ? 'Marquer comme non terminé' : 'Marquer comme terminé'}
+          title={card.is_completed ? t.cards.markIncomplete : t.cards.markComplete}
         >
           {card.is_completed && '✓'}
         </button>
@@ -533,7 +543,7 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
               disabled={uploading}
             >
               <span className="menu-icon">🖼️</span>
-              {uploading ? 'Upload...' : (card.cover_image ? (t.cards.changeImage || 'Changer la photo') : (t.cards.addImage || 'Ajouter une photo'))}
+              {uploading ? t.cards.uploading : (card.cover_image ? t.cards.changeImage : t.cards.addImage)}
             </button>
 
             {card.cover_image && (
@@ -603,7 +613,7 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
             >
               ✕
             </button>
-            <img src={card.cover_image} alt={card.title} />
+            <Image src={card.cover_image} alt={card.title} width={800} height={600} style={{ width: '100%', height: 'auto' }} unoptimized />
             <div className="image-modal-title">{card.title}</div>
           </div>
         </div>
@@ -707,7 +717,7 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
                     <span className="preview-icon">⏱️</span>
                     <span className="preview-label">{t.cards.daysRemainingPlural?.replace('{count}', '') || 'Jours restants'}</span>
                     <span className={`preview-value ${getDaysRemaining(tempDueDate) < 0 ? 'overdue' : getDaysRemaining(tempDueDate) <= 3 ? 'soon' : ''}`}>
-                      {getDaysRemaining(tempDueDate)} {getDaysRemaining(tempDueDate) === 1 ? 'jour' : 'jours'}
+                      {getDaysRemaining(tempDueDate)} {getDaysRemaining(tempDueDate) === 1 ? t.cards.day : t.cards.days}
                     </span>
                   </div>
                   {useStartDate && tempStartDate && (
@@ -715,7 +725,7 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
                       <span className="preview-icon">📊</span>
                       <span className="preview-label">{t.cards.durationPlural?.replace('{count}', '') || 'Durée totale'}</span>
                       <span className="preview-value duration">
-                        {getDuration(tempStartDate, tempDueDate)} {getDuration(tempStartDate, tempDueDate) === 1 ? 'jour' : 'jours'}
+                        {getDuration(tempStartDate, tempDueDate)} {getDuration(tempStartDate, tempDueDate) === 1 ? t.cards.day : t.cards.days}
                       </span>
                     </div>
                   )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useLanguage } from '@/lib/language-context'
 import './CreateListButton.css'
 
 interface CreateListButtonProps {
@@ -10,6 +11,7 @@ interface CreateListButtonProps {
 export default function CreateListButton({ onCreate }: CreateListButtonProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [title, setTitle] = useState('')
+  const { t } = useLanguage()
 
   const handleCreate = () => {
     if (title.trim()) {
@@ -26,13 +28,13 @@ export default function CreateListButton({ onCreate }: CreateListButtonProps) {
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Enter list title..."
+          placeholder={t.lists.enterListTitle}
           autoFocus
           onKeyPress={(e) => e.key === 'Enter' && handleCreate()}
         />
         <div className="form-actions">
           <button className="add-button" onClick={handleCreate}>
-            Add List
+            {t.lists.createList}
           </button>
           <button className="cancel-button" onClick={() => {
             setTitle('')
@@ -47,7 +49,7 @@ export default function CreateListButton({ onCreate }: CreateListButtonProps) {
 
   return (
     <button className="create-list-button" onClick={() => setIsAdding(true)}>
-      + Add another list
+      {t.lists.addAnotherList}
     </button>
   )
 }

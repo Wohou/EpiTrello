@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // PUT: Accept or decline an invitation
 export async function PUT(
@@ -71,9 +79,10 @@ export async function PUT(
 
     if (updateError) throw updateError
 
-    // If accepted, add user to board_members using upsert to avoid duplicates
+    // If accepted, add user to board_members using admin client to bypass RLS
     if (action === 'accept') {
-      const { error: memberError } = await supabase
+      const supabaseAdmin = getSupabaseAdmin()
+      const { error: memberError } = await supabaseAdmin
         .from('board_members')
         .upsert({
           board_id: invitation.board_id,

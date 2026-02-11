@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { useLanguage } from '@/lib/language-context'
 import './ProfileMenu.css'
@@ -56,7 +57,7 @@ export default function ProfileMenu({ username, userEmail, avatarUrl }: ProfileM
       >
         <div className="profile-avatar">
           {avatarUrl ? (
-            <img src={avatarUrl} alt="Avatar" className="avatar-image" />
+            <Image src={avatarUrl} alt="Avatar" className="avatar-image" width={32} height={32} />
           ) : (
             getAvatarLetter(username)
           )}
@@ -70,7 +71,7 @@ export default function ProfileMenu({ username, userEmail, avatarUrl }: ProfileM
           <div className="profile-info">
             <div className="profile-avatar-large">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" className="avatar-image" />
+                <Image src={avatarUrl} alt="Avatar" className="avatar-image" width={48} height={48} />
               ) : (
                 getAvatarLetter(username)
               )}

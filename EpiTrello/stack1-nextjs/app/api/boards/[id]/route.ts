@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function GET(
   request: NextRequest,
@@ -18,23 +26,50 @@ export async function GET(
       )
     }
 
-    const { data: board, error: boardError } = await supabase
+    // Use admin client to bypass RLS so shared members can access
+    const supabaseAdmin = getSupabaseAdmin()
+
+    const { data: board, error: boardError } = await supabaseAdmin
       .from('boards')
       .select('*')
       .eq('id', params.id)
       .single()
 
-    if (boardError) {
-      if (boardError.code === 'PGRST116') {
-        return NextResponse.json(
-          { error: 'Board not found or access denied' },
-          { status: 404 }
-        )
-      }
-      throw boardError
+    if (boardError || !board) {
+      return NextResponse.json(
+        { error: 'Board not found' },
+        { status: 404 }
+      )
     }
 
-    const { data: lists, error: listsError } = await supabase
+    // Verify user has access: is owner OR is a member
+    const isOwner = board.owner_id === user.id
+    if (!isOwner) {
+      const { data: membership } = await supabaseAdmin
+        .from('board_members')
+        .select('id, role')
+        .eq('board_id', params.id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      // Also check if user has an accepted invitation
+      const { data: invitation } = await supabaseAdmin
+        .from('board_invitations')
+        .select('id')
+        .eq('board_id', params.id)
+        .eq('invitee_id', user.id)
+        .eq('status', 'accepted')
+        .maybeSingle()
+
+      if (!membership && !invitation) {
+        return NextResponse.json(
+          { error: 'Access denied' },
+          { status: 403 }
+        )
+      }
+    }
+
+    const { data: lists, error: listsError } = await supabaseAdmin
       .from('lists')
       .select('*')
       .eq('board_id', params.id)
@@ -44,7 +79,7 @@ export async function GET(
 
     const listsWithCards = await Promise.all(
       (lists || []).map(async (list) => {
-        const { data: cards, error: cardsError } = await supabase
+        const { data: cards, error: cardsError } = await supabaseAdmin
           .from('cards')
           .select('*')
           .eq('list_id', list.id)
@@ -54,7 +89,7 @@ export async function GET(
 
         const cardsWithGitHub = await Promise.all(
           (cards || []).map(async (card) => {
-            const { data: githubLinks, error: linksError } = await supabase
+            const { data: githubLinks, error: linksError } = await supabaseAdmin
               .from('card_github_links')
               .select('*')
               .eq('card_id', card.id)
@@ -107,10 +142,53 @@ export async function PUT(
       )
     }
 
+    // Check if the user is the owner or a member of this board
+    const supabaseAdmin = getSupabaseAdmin()
+
+    const { data: board } = await supabaseAdmin
+      .from('boards')
+      .select('owner_id')
+      .eq('id', params.id)
+      .single()
+
+    if (!board) {
+      return NextResponse.json(
+        { error: 'Board not found' },
+        { status: 404 }
+      )
+    }
+
+    const isOwner = board.owner_id === user.id
+
+    if (!isOwner) {
+      const { data: membership } = await supabaseAdmin
+        .from('board_members')
+        .select('id')
+        .eq('board_id', params.id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      const { data: invitation } = await supabaseAdmin
+        .from('board_invitations')
+        .select('id')
+        .eq('board_id', params.id)
+        .eq('invitee_id', user.id)
+        .eq('status', 'accepted')
+        .maybeSingle()
+
+      if (!membership && !invitation) {
+        return NextResponse.json(
+          { error: 'Access denied' },
+          { status: 403 }
+        )
+      }
+    }
+
     const body = await request.json()
     const { title, description } = body
 
-    const { data, error } = await supabase
+    // Use admin client to bypass RLS for authorized members
+    const { data, error } = await supabaseAdmin
       .from('boards')
       .update({ title, description, updated_at: new Date().toISOString() })
       .eq('id', params.id)
@@ -118,12 +196,6 @@ export async function PUT(
       .single()
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        return NextResponse.json(
-          { error: 'Board not found or access denied' },
-          { status: 404 }
-        )
-      }
       throw error
     }
 

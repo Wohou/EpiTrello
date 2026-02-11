@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type ChangeEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { themes, type ThemeKey } from '@/lib/themes'
 import { useTheme } from '@/lib/theme-context'
@@ -111,7 +112,7 @@ export default function SettingsPage() {
 
       const fileExt = file.name.split('.').pop()
       const fileName = `${user.id}-${Math.random()}.${fileExt}`
-      const filePath = `avatars/${fileName}`
+      const filePath = fileName
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabaseBrowser.storage
@@ -203,7 +204,7 @@ export default function SettingsPage() {
             <div className="avatar-section">
               <div className="current-avatar">
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="avatar-image" />
+                  <Image src={avatarUrl} alt="Avatar" className="avatar-image" width={80} height={80} />
                 ) : (
                   getAvatarLetter(username)
                 )}

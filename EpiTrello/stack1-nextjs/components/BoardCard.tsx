@@ -1,6 +1,7 @@
 'use client'
 
 import { useLanguage } from '@/lib/language-context'
+import { useNotification } from '@/components/NotificationContext'
 import type { Board } from '@/lib/supabase'
 import './BoardCard.css'
 
@@ -12,10 +13,18 @@ interface BoardCardProps {
 
 export default function BoardCard({ board, onClick, onDelete }: BoardCardProps) {
   const { t } = useLanguage()
+  const { confirm } = useNotification()
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (confirm(t.boards.deleteConfirm)) {
+    const confirmed = await confirm({
+      title: t.boards.deleteBoard,
+      message: t.boards.deleteConfirm,
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
+      variant: 'danger',
+    })
+    if (confirmed) {
       onDelete()
     }
   }

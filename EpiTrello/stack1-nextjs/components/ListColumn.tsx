@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { Droppable, Draggable, DraggableProvidedDragHandleProps } from '@hello-pangea/dnd'
 import CardItem from './CardItem'
+import { useNotification } from '@/components/NotificationContext'
+import { useLanguage } from '@/lib/language-context'
 import type { ListWithCards, Card } from '@/lib/supabase'
 import './ListColumn.css'
 
@@ -32,6 +34,8 @@ export default function ListColumn({
   const [newCardDescription, setNewCardDescription] = useState('')
   const [editingTitle, setEditingTitle] = useState(false)
   const [tempTitle, setTempTitle] = useState('')
+  const { confirm } = useNotification()
+  const { t } = useLanguage()
 
   const handleAddCard = () => {
     if (newCardTitle.trim()) {
@@ -42,8 +46,15 @@ export default function ListColumn({
     }
   }
 
-  const handleDeleteList = () => {
-    if (confirm('Are you sure you want to delete this list? All cards will be deleted.')) {
+  const handleDeleteList = async () => {
+    const confirmed = await confirm({
+      title: t.lists.deleteList,
+      message: t.lists.deleteListConfirm,
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
+      variant: 'danger',
+    })
+    if (confirmed) {
       onDeleteList()
     }
   }
@@ -128,27 +139,27 @@ export default function ListColumn({
             type="text"
             value={newCardTitle}
             onChange={(e) => setNewCardTitle(e.target.value)}
-            placeholder="Card title"
+            placeholder={t.cards.titlePlaceholder}
             autoFocus
           />
           <textarea
             value={newCardDescription}
             onChange={(e) => setNewCardDescription(e.target.value)}
-            placeholder="Description (optional)"
+            placeholder={t.cards.descriptionOptional}
             rows={2}
           />
           <div className="form-actions">
             <button className="add-button" onClick={handleAddCard}>
-              Add Card
+              {t.cards.addCard}
             </button>
             <button className="cancel-button" onClick={() => setIsAddingCard(false)}>
-              Cancel
+              {t.common.cancel}
             </button>
           </div>
         </div>
       ) : (
         <button className="add-card-button" onClick={() => setIsAddingCard(true)}>
-          + Add a card
+          + {t.cards.addCard}
         </button>
       )}
     </div>

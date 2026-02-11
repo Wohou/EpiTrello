@@ -3,6 +3,7 @@ import './globals.css'
 import CursorGlow from '@/components/CursorGlow'
 import { ThemeProvider } from '@/lib/theme-context'
 import { LanguageProvider } from '@/lib/language-context'
+import { NotificationProvider } from '@/components/NotificationContext'
 
 export const metadata: Metadata = {
   title: 'EpiTrello',
@@ -22,8 +23,10 @@ export default function RootLayout({
       <body>
         <LanguageProvider>
           <ThemeProvider>
-            <CursorGlow />
-            {children}
+            <NotificationProvider>
+              <CursorGlow />
+              {children}
+            </NotificationProvider>
           </ThemeProvider>
         </LanguageProvider>
       </body>

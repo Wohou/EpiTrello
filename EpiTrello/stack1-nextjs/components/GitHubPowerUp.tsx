@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLanguage } from '@/lib/language-context'
+import { useNotification } from '@/components/NotificationContext'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import type { CardGitHubLink, GitHubRepo, GitHubIssue } from '@/lib/supabase'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -15,6 +16,7 @@ interface GitHubPowerUpProps {
 
 export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPowerUpProps) {
   const { t } = useLanguage()
+  const { alert, confirm } = useNotification()
   const [connected, setConnected] = useState(false)
   const [, setHasRepoScope] = useState(false)
   const [githubUsername, setGithubUsername] = useState<string | null>(null)
@@ -40,6 +42,21 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
 
   // Realtime subscription
   const channelRef = useRef<RealtimeChannel | null>(null)
+
+  const fetchLinkedIssues = useCallback(async () => {
+    setLoadingLinks(true)
+    try {
+      const response = await fetch(`/api/cards/${cardId}/github`)
+      if (response.ok) {
+        const data = await response.json()
+        setLinkedIssues(data)
+      }
+    } catch (error) {
+      console.error('Error fetching linked issues:', error)
+    } finally {
+      setLoadingLinks(false)
+    }
+  }, [cardId])
 
   useEffect(() => {
     checkGitHubConnection()
@@ -73,7 +90,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
         supabaseBrowser.removeChannel(channelRef.current)
       }
     }
-  }, [connected, cardId])
+  }, [connected, cardId, fetchLinkedIssues])
 
   const checkGitHubConnection = async () => {
     try {
@@ -95,7 +112,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
     try {
       const { data: sessionData } = await supabaseBrowser.auth.getSession()
       if (!sessionData?.session) {
-        alert(t.github.connectionError)
+        await alert({ message: t.github.connectionError, variant: 'error' })
         return
       }
 
@@ -106,9 +123,9 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
 
       if (!checkResponse.ok) {
         if (checkResponse.status === 401) {
-          alert(t.github.connectionError)
+          await alert({ message: t.github.connectionError, variant: 'error' })
         } else {
-          alert(t.github.connectionError)
+          await alert({ message: t.github.connectionError, variant: 'error' })
         }
         return
       }
@@ -126,7 +143,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
 
         if (error) {
           console.error('Error linking GitHub:', error)
-          alert(t.github.connectionError)
+          await alert({ message: t.github.connectionError, variant: 'error' })
         }
       } else if (data.success) {
         setConnected(true)
@@ -135,7 +152,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       }
     } catch (error) {
       console.error('Error connecting GitHub:', error)
-      alert(t.github.connectionError)
+      await alert({ message: t.github.connectionError, variant: 'error' })
     }
   }
 
@@ -149,22 +166,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       }
     } catch (error) {
       console.error('Error disconnecting GitHub:', error)
-      alert(t.github.connectionError)
-    }
-  }
-
-  const fetchLinkedIssues = async () => {
-    setLoadingLinks(true)
-    try {
-      const response = await fetch(`/api/cards/${cardId}/github`)
-      if (response.ok) {
-        const data = await response.json()
-        setLinkedIssues(data)
-      }
-    } catch (error) {
-      console.error('Error fetching linked issues:', error)
-    } finally {
-      setLoadingLinks(false)
+      await alert({ message: t.github.connectionError, variant: 'error' })
     }
   }
 
@@ -174,7 +176,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       const tokenResponse = await fetch('/api/github/token')
       if (!tokenResponse.ok) {
         if (tokenResponse.status === 403) {
-          alert(t.github.connectionError)
+          await alert({ message: t.github.connectionError, variant: 'error' })
           return
         }
         throw new Error('GitHub not connected')
@@ -195,7 +197,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       }
     } catch (error) {
       console.error('Error fetching repositories:', error)
-      alert(t.github.error)
+      await alert({ message: t.github.error, variant: 'error' })
     } finally {
       setLoadingRepos(false)
     }
@@ -208,7 +210,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       const tokenResponse = await fetch('/api/github/token')
       if (!tokenResponse.ok) {
         if (tokenResponse.status === 403) {
-          alert(t.github.connectionError)
+          await alert({ message: t.github.connectionError, variant: 'error' })
           return
         }
         throw new Error('GitHub not connected')
@@ -233,7 +235,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       }
     } catch (error) {
       console.error('Error fetching issues:', error)
-      alert(t.github.error)
+      await alert({ message: t.github.error, variant: 'error' })
     } finally {
       setLoadingIssues(false)
     }
@@ -290,11 +292,11 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
         setSelectedIssue(null)
       } else {
         const error = await response.json()
-        alert(error.error || t.github.linkError)
+        await alert({ message: error.error || t.github.linkError, variant: 'error' })
       }
     } catch (error) {
       console.error('Error linking issue:', error)
-      alert(t.github.linkError)
+      await alert({ message: t.github.linkError, variant: 'error' })
     }
   }
 
@@ -308,7 +310,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       const tokenResponse = await fetch('/api/github/token')
       if (!tokenResponse.ok) {
         if (tokenResponse.status === 403) {
-          alert(t.github.connectionError)
+          await alert({ message: t.github.connectionError, variant: 'error' })
           return
         }
         throw new Error('GitHub not connected')
@@ -371,18 +373,25 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
         setIssueDescription('')
       } else {
         const error = await linkResponse.json()
-        alert(error.error || t.github.createError)
+        await alert({ message: error.error || t.github.createError, variant: 'error' })
       }
     } catch (error) {
       console.error('Error creating issue:', error)
-      alert(t.github.createError)
+      await alert({ message: t.github.createError, variant: 'error' })
     } finally {
       setCreating(false)
     }
   }
 
   const handleUnlink = async (linkId: string) => {
-    if (!confirm(t.github.unlinkConfirm)) return
+    const confirmed = await confirm({
+      title: 'GitHub',
+      message: t.github.unlinkConfirm,
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
+      variant: 'danger',
+    })
+    if (!confirmed) return
 
     try {
       const response = await fetch(`/api/cards/${cardId}/github?linkId=${linkId}`, {
@@ -394,15 +403,21 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       }
     } catch (error) {
       console.error('Error unlinking issue:', error)
-      alert(t.github.error)
+      await alert({ message: t.github.error, variant: 'error' })
     }
   }
 
   const handleToggleIssueState = async (link: CardGitHubLink) => {
     const newState = link.github_state === 'open' ? 'closed' : 'open'
-    const action = newState === 'closed' ? 'fermer' : 'rouvrir'
+    const action = newState === 'closed' ? t.github.closeAction : t.github.reopenAction
 
-    if (!confirm(`Voulez-vous ${action} l'issue #${link.github_number} sur GitHub ?`)) return
+    const confirmed = await confirm({
+      title: 'GitHub',
+      message: t.github.toggleIssueConfirm.replace('{action}', action).replace('{number}', String(link.github_number)),
+      confirmText: action.charAt(0).toUpperCase() + action.slice(1),
+      cancelText: t.common.cancel,
+    })
+    if (!confirmed) return
 
     setLinkedIssues(prev =>
       prev.map(issue =>
@@ -416,7 +431,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       const tokenResponse = await fetch('/api/github/token')
       if (!tokenResponse.ok) {
         await fetchLinkedIssues()
-        alert(t.github.connectionError)
+        await alert({ message: t.github.connectionError, variant: 'error' })
         return
       }
 
@@ -456,12 +471,12 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
       } else {
         const error = await response.json()
         await fetchLinkedIssues()
-        alert(`Erreur: ${error.message || 'Impossible de modifier l\'issue'}`)
+        await alert({ message: `Erreur: ${error.message || t.github.toggleError}`, variant: 'error' })
       }
     } catch (error) {
       console.error('Error toggling issue state:', error)
       await fetchLinkedIssues()
-      alert(t.github.error)
+      await alert({ message: t.github.error, variant: 'error' })
     }
   }
 
@@ -532,7 +547,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
                       <button
                         className={`issue-state-toggle ${link.github_state}`}
                         onClick={() => handleToggleIssueState(link)}
-                        title={link.github_state === 'open' ? 'Cliquer pour fermer' : 'Cliquer pour rouvrir'}
+                        title={link.github_state === 'open' ? t.github.clickToClose : t.github.clickToReopen}
                       >
                         {link.github_state === 'open'
                           ? (t.github.openIssue || 'Ouvert')
@@ -592,7 +607,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
                 ? t.github.loadingRepos
                 : (repos.length === 0
                     ? t.github.noRepos
-                    : '-- Select a repository --')}
+                    : t.github.selectRepoPlaceholder)}
             </option>
             {repos.map((repo) => (
               <option key={repo.id} value={repo.full_name}>
@@ -615,7 +630,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
                   ? t.github.loadingIssues
                   : (issues.length === 0
                       ? t.github.noIssues
-                      : '-- Select an issue --')}
+                      : t.github.selectIssuePlaceholder)}
               </option>
               {issues.map((issue) => (
                 <option key={issue.id} value={issue.number}>
@@ -659,7 +674,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
                 ? t.github.loadingRepos
                 : (repos.length === 0
                     ? t.github.noRepos
-                    : '-- Select a repository --')}
+                    : t.github.selectRepoPlaceholder)}
             </option>
             {repos.map((repo) => (
               <option key={repo.id} value={repo.full_name}>
@@ -677,7 +692,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
                 type="text"
                 value={issueTitle}
                 onChange={(e) => setIssueTitle(e.target.value)}
-                placeholder="Enter issue title..."
+                placeholder={t.github.issueTitlePlaceholder}
               />
             </div>
 
@@ -686,7 +701,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
               <textarea
                 value={issueDescription}
                 onChange={(e) => setIssueDescription(e.target.value)}
-                placeholder="Enter issue description..."
+                placeholder={t.github.issueDescriptionPlaceholder}
                 rows={5}
               />
             </div>

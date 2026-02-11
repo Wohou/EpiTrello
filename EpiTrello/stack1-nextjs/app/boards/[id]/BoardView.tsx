@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import { supabaseBrowser } from '@/lib/supabase-browser'
+import { useLanguage } from '@/lib/language-context'
 import ListColumn from '@/components/ListColumn'
 import CreateListButton from '@/components/CreateListButton'
 import BoardManageMenu from '@/components/BoardManageMenu'
@@ -26,15 +27,27 @@ export default function BoardView({ boardId }: BoardViewProps) {
   const [isSharedBoard, setIsSharedBoard] = useState(false)
   const [members, setMembers] = useState<BoardMember[]>([])
   const router = useRouter()
+  const { t } = useLanguage()
   const channelRef = useRef<RealtimeChannel | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastLocalChangeRef = useRef<number>(0)
 
+  // Broadcast a change to other users on this board
+  const broadcastChange = useCallback((event: string) => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'board-update',
+        payload: { event, timestamp: Date.now() },
+      })
+    }
+  }, [])
+
   // Memoized fetch function for realtime updates with debounce
   const fetchBoardData = useCallback(async () => {
-    // Skip if we just made a local change (within 1 second)
+    // Skip if we just made a local change (within 2 seconds)
     const timeSinceLastChange = Date.now() - lastLocalChangeRef.current
-    if (timeSinceLastChange < 1000) {
+    if (timeSinceLastChange < 2000) {
       console.log('Skipping realtime fetch - recent local change')
       return
     }
@@ -43,7 +56,6 @@ export default function BoardView({ boardId }: BoardViewProps) {
       const response = await fetch(`/api/boards/${boardId}`)
       if (response.ok) {
         const data = await response.json()
-        console.log('Fetched board data:', data)
         setBoard(data)
         console.log('Board data refreshed from realtime')
       }
@@ -67,6 +79,49 @@ export default function BoardView({ boardId }: BoardViewProps) {
   //   lastLocalChangeRef.current = Date.now()
   // }, [])
 
+  const fetchCurrentUser = async () => {
+    await supabaseBrowser.auth.getUser()
+    // User fetched for auth validation
+  }
+  const fetchBoard = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/boards/${boardId}`)
+      if (!response.ok) {
+        console.error('Error fetching board:', response.status)
+        setLoading(false)
+        return
+      }
+      const data = await response.json()
+      setBoard(data)
+
+      // Check if current user is owner
+      const { data: { user } } = await supabaseBrowser.auth.getUser()
+      if (user && data.owner_id === user.id) {
+        setIsOwner(true)
+        setIsSharedBoard(false)
+      } else {
+        setIsOwner(false)
+        setIsSharedBoard(true)
+      }
+    } catch (error) {
+      console.error('Error fetching board:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [boardId])
+
+  const fetchMembers = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/boards/${boardId}/members`)
+      if (response.ok) {
+        const data = await response.json()
+        setMembers(data)
+      }
+    } catch (error) {
+      console.error('Error fetching members:', error)
+    }
+  }, [boardId])
+
   useEffect(() => {
     fetchCurrentUser()
     fetchBoard()
@@ -75,6 +130,16 @@ export default function BoardView({ boardId }: BoardViewProps) {
     // Set up realtime subscription
     const channel = supabaseBrowser
       .channel(`board-${boardId}`)
+      // Listen for broadcast events from other users (works without RLS)
+      .on(
+        'broadcast',
+        { event: 'board-update' },
+        () => {
+          console.log('📡 Broadcast: Board updated by another user')
+          debouncedFetchBoardData()
+        }
+      )
+      // Also keep postgres_changes as fallback (works if RLS allows it)
       .on(
         'postgres_changes',
         {
@@ -107,8 +172,8 @@ export default function BoardView({ boardId }: BoardViewProps) {
           schema: 'public',
           table: 'card_github_links'
         },
-        (payload) => {
-          console.log('Realtime: GitHub links changed', payload)
+        () => {
+          console.log('Realtime: GitHub links changed')
           debouncedFetchBoardData()
         }
       )
@@ -151,45 +216,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
         supabaseBrowser.removeChannel(channelRef.current)
       }
     }
-  }, [boardId, debouncedFetchBoardData])
-
-  const fetchCurrentUser = async () => {
-    await supabaseBrowser.auth.getUser()
-    // User fetched for auth validation
-  }
-  const fetchBoard = async () => {
-    try {
-      const response = await fetch(`/api/boards/${boardId}`)
-      const data = await response.json()
-      setBoard(data)
-
-      // Check if current user is owner
-      const { data: { user } } = await supabaseBrowser.auth.getUser()
-      if (user && data.owner_id === user.id) {
-        setIsOwner(true)
-        setIsSharedBoard(false)
-      } else {
-        setIsOwner(false)
-        setIsSharedBoard(true)
-      }
-    } catch (error) {
-      console.error('Error fetching board:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchMembers = async () => {
-    try {
-      const response = await fetch(`/api/boards/${boardId}/members`)
-      if (response.ok) {
-        const data = await response.json()
-        setMembers(data)
-      }
-    } catch (error) {
-      console.error('Error fetching members:', error)
-    }
-  }
+  }, [boardId, debouncedFetchBoardData, fetchBoard, fetchMembers])
 
   const handleInvite = async (userId: string) => {
     const response = await fetch('/api/invitations', {
@@ -261,6 +288,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
 
       // Save to database
       try {
+        lastLocalChangeRef.current = Date.now()
         await fetch('/api/lists/reorder', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -268,6 +296,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
             lists: updatedLists.map(l => ({ id: l.id, position: l.position })),
           }),
         })
+        broadcastChange('list-reorder')
       } catch (error) {
         console.error('Error reordering lists:', error)
         // Revert on error
@@ -308,6 +337,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
 
         // Save to database
         try {
+          lastLocalChangeRef.current = Date.now()
           await fetch('/api/cards/reorder', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -319,6 +349,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
               })),
             }),
           })
+          broadcastChange('card-reorder')
         } catch (error) {
           console.error('Error reordering cards:', error)
           fetchBoard()
@@ -358,6 +389,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
 
         // Save to database
         try {
+          lastLocalChangeRef.current = Date.now()
           await fetch('/api/cards/reorder', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -376,6 +408,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
               ],
             }),
           })
+          broadcastChange('card-move')
         } catch (error) {
           console.error('Error moving card:', error)
           fetchBoard()
@@ -388,6 +421,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
     if (!board) return
 
     try {
+      lastLocalChangeRef.current = Date.now()
       const position = board.lists.length
       const response = await fetch('/api/lists', {
         method: 'POST',
@@ -399,6 +433,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
         ...board,
         lists: [...board.lists, { ...newList, cards: [] }],
       })
+      broadcastChange('list-created')
     } catch (error) {
       console.error('Error creating list:', error)
     }
@@ -408,11 +443,13 @@ export default function BoardView({ boardId }: BoardViewProps) {
     if (!board) return
 
     try {
+      lastLocalChangeRef.current = Date.now()
       await fetch(`/api/lists/${listId}`, { method: 'DELETE' })
       setBoard({
         ...board,
         lists: board.lists.filter(list => list.id !== listId),
       })
+      broadcastChange('list-deleted')
     } catch (error) {
       console.error('Error deleting list:', error)
     }
@@ -425,6 +462,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
     if (!list) return
 
     try {
+      lastLocalChangeRef.current = Date.now()
       const position = list.cards.length
       const response = await fetch('/api/cards', {
         method: 'POST',
@@ -441,6 +479,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
             : l
         ),
       })
+      broadcastChange('card-created')
     } catch (error) {
       console.error('Error creating card:', error)
     }
@@ -450,6 +489,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
     if (!board) return
 
     try {
+      lastLocalChangeRef.current = Date.now()
       await fetch(`/api/cards/${cardId}`, { method: 'DELETE' })
       setBoard({
         ...board,
@@ -459,6 +499,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
             : list
         ),
       })
+      broadcastChange('card-deleted')
     } catch (error) {
       console.error('Error deleting card:', error)
     }
@@ -468,6 +509,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
     if (!board) return
 
     try {
+      lastLocalChangeRef.current = Date.now()
       const response = await fetch(`/api/cards/${cardId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -484,6 +526,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
           ),
         })),
       })
+      broadcastChange('card-updated')
     } catch (error) {
       console.error('Error updating card:', error)
     }
@@ -507,14 +550,21 @@ export default function BoardView({ boardId }: BoardViewProps) {
     if (!board || !tempTitle.trim()) return
 
     try {
+      lastLocalChangeRef.current = Date.now()
       const response = await fetch(`/api/boards/${boardId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: tempTitle }),
       })
+      if (!response.ok) {
+        console.error('Error updating board title:', response.status)
+        setEditingTitle(false)
+        return
+      }
       const updatedBoard = await response.json()
       setBoard({ ...board, title: updatedBoard.title })
       setEditingTitle(false)
+      broadcastChange('board-title-updated')
     } catch (error) {
       console.error('Error updating board title:', error)
     }
@@ -524,14 +574,21 @@ export default function BoardView({ boardId }: BoardViewProps) {
     if (!board) return
 
     try {
+      lastLocalChangeRef.current = Date.now()
       const response = await fetch(`/api/boards/${boardId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description: tempDescription }),
       })
+      if (!response.ok) {
+        console.error('Error updating board description:', response.status)
+        setEditingDescription(false)
+        return
+      }
       const updatedBoard = await response.json()
       setBoard({ ...board, description: updatedBoard.description })
       setEditingDescription(false)
+      broadcastChange('board-description-updated')
     } catch (error) {
       console.error('Error updating board description:', error)
     }
@@ -548,6 +605,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
     if (!board) return
 
     try {
+      lastLocalChangeRef.current = Date.now()
       const response = await fetch(`/api/lists/${listId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -561,17 +619,18 @@ export default function BoardView({ boardId }: BoardViewProps) {
           list.id === listId ? { ...list, title: updatedList.title } : list
         ),
       })
+      broadcastChange('list-updated')
     } catch (error) {
       console.error('Error updating list title:', error)
     }
   }
 
   if (loading) {
-    return <div className="loading">Loading board...</div>
+    return <div className="loading">{t.boards.loadingBoard}</div>
   }
 
   if (!board) {
-    return <div className="error">Board not found</div>
+    return <div className="error">{t.boards.boardNotFound}</div>
   }
 
   return (
@@ -579,7 +638,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
       <div className="board-header">
         <div className="board-header-left">
           <button className="back-button" onClick={() => router.push('/boards')}>
-            ← Back to Boards
+            ← {t.boards.backToBoards}
           </button>
 
           <div className="board-title-section">
@@ -621,7 +680,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
                 onDoubleClick={handleStartEditDescription}
                 className="board-description editable-description"
               >
-                {board.description || 'Double-cliquez pour ajouter une description...'}
+                {board.description || t.cards.addDescription}
               </p>
             )}
           </div>

@@ -1,7 +1,8 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import BoardCard from '../components/BoardCard'
 import { useLanguage } from '../lib/language-context'
+import { useNotification } from '../components/NotificationContext'
 import type { Board } from '../lib/supabase'
 
 // Mock the language context
@@ -9,10 +10,15 @@ jest.mock('../lib/language-context', () => ({
   useLanguage: jest.fn(),
 }))
 
+// Mock the notification context
+const mockNotificationConfirm = jest.fn()
+jest.mock('../components/NotificationContext', () => ({
+  useNotification: jest.fn(),
+}))
+
 describe('BoardCard', () => {
   let mockOnClick: jest.Mock
   let mockOnDelete: jest.Mock
-  let mockConfirm: jest.SpyInstance
 
   const mockBoard: Board = {
     id: 'board-1',
@@ -27,7 +33,12 @@ describe('BoardCard', () => {
 
   const mockTranslations = {
     boards: {
+      deleteBoard: 'Delete board',
       deleteConfirm: 'Are you sure you want to delete this board?',
+    },
+    common: {
+      delete: 'Delete',
+      cancel: 'Cancel',
     },
     sharing: {
       sharedBy: 'Shared by {name}',
@@ -37,13 +48,9 @@ describe('BoardCard', () => {
   beforeEach(() => {
     mockOnClick = jest.fn()
     mockOnDelete = jest.fn()
-    mockConfirm = jest.spyOn(window, 'confirm')
-
+    mockNotificationConfirm.mockReset()
     ;(useLanguage as jest.Mock).mockReturnValue({ t: mockTranslations })
-  })
-
-  afterEach(() => {
-    mockConfirm.mockRestore()
+    ;(useNotification as jest.Mock).mockReturnValue({ confirm: mockNotificationConfirm })
   })
 
   describe('Basic rendering', () => {
@@ -113,37 +120,46 @@ describe('BoardCard', () => {
     })
 
     it('should show confirmation dialog when clicking delete', () => {
-      mockConfirm.mockReturnValue(true)
+      mockNotificationConfirm.mockResolvedValue(true)
       render(<BoardCard board={mockBoard} onClick={mockOnClick} onDelete={mockOnDelete} />)
 
       const deleteButton = screen.getByRole('button', { name: '×' })
       fireEvent.click(deleteButton)
 
-      expect(mockConfirm).toHaveBeenCalledWith('Are you sure you want to delete this board?')
+      expect(mockNotificationConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Are you sure you want to delete this board?',
+        })
+      )
     })
 
-    it('should call onDelete when user confirms deletion', () => {
-      mockConfirm.mockReturnValue(true)
+    it('should call onDelete when user confirms deletion', async () => {
+      mockNotificationConfirm.mockResolvedValue(true)
       render(<BoardCard board={mockBoard} onClick={mockOnClick} onDelete={mockOnDelete} />)
 
       const deleteButton = screen.getByRole('button', { name: '×' })
       fireEvent.click(deleteButton)
 
-      expect(mockOnDelete).toHaveBeenCalledTimes(1)
+      await waitFor(() => {
+        expect(mockOnDelete).toHaveBeenCalledTimes(1)
+      })
     })
 
-    it('should not call onDelete when user cancels deletion', () => {
-      mockConfirm.mockReturnValue(false)
+    it('should not call onDelete when user cancels deletion', async () => {
+      mockNotificationConfirm.mockResolvedValue(false)
       render(<BoardCard board={mockBoard} onClick={mockOnClick} onDelete={mockOnDelete} />)
 
       const deleteButton = screen.getByRole('button', { name: '×' })
       fireEvent.click(deleteButton)
 
+      await waitFor(() => {
+        expect(mockNotificationConfirm).toHaveBeenCalled()
+      })
       expect(mockOnDelete).not.toHaveBeenCalled()
     })
 
     it('should not trigger onClick when clicking delete button', () => {
-      mockConfirm.mockReturnValue(true)
+      mockNotificationConfirm.mockResolvedValue(true)
       render(<BoardCard board={mockBoard} onClick={mockOnClick} onDelete={mockOnDelete} />)
 
       const deleteButton = screen.getByRole('button', { name: '×' })
@@ -199,18 +215,23 @@ describe('BoardCard', () => {
   describe('Translation integration', () => {
     it('should use translated confirmation message', () => {
       const customTranslations = {
-        boards: { deleteConfirm: 'Voulez-vous vraiment supprimer ce tableau ?' },
+        boards: { deleteBoard: 'Supprimer', deleteConfirm: 'Voulez-vous vraiment supprimer ce tableau ?' },
+        common: { delete: 'Supprimer', cancel: 'Annuler' },
         sharing: { sharedBy: 'Shared by {name}' },
       }
       ;(useLanguage as jest.Mock).mockReturnValue({ t: customTranslations })
-      mockConfirm.mockReturnValue(true)
+      mockNotificationConfirm.mockResolvedValue(true)
 
       render(<BoardCard board={mockBoard} onClick={mockOnClick} onDelete={mockOnDelete} />)
 
       const deleteButton = screen.getByRole('button', { name: '×' })
       fireEvent.click(deleteButton)
 
-      expect(mockConfirm).toHaveBeenCalledWith('Voulez-vous vraiment supprimer ce tableau ?')
+      expect(mockNotificationConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Voulez-vous vraiment supprimer ce tableau ?',
+        })
+      )
     })
 
     it('should use translated shared by text with placeholder replacement', () => {

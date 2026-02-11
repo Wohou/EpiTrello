@@ -260,7 +260,7 @@ async function main() {
 
   const metrics = {
     coverage: hasCoverage
-      ? `<div class="metrics"><div class="metric"><span>Statements</span><strong>${results.tests.coverage.statements.pct}%</strong></div><div class="metric"><span>Branches</span><strong>${results.tests.coverage.branches.pct}%</strong></div><div class="metric"><span>Functions</span><strong>${results.tests.coverage.functions.pct}%</strong></div><div class="metric"><span>Lines</span><strong>${results.tests.coverage.lines.pct}%</strong></div></div>`
+      ? `<div class="metrics"><div class="metric"><span>Branches</span><strong>${results.tests.coverage.branches.pct}%</strong></div><div class="metric"><span>Functions</span><strong>${results.tests.coverage.functions.pct}%</strong></div><div class="metric"><span>Lines</span><strong>${results.tests.coverage.lines.pct}%</strong></div></div>`
       : '',
     audit: hasAudit
       ? `<div class="metrics"><div class="metric"><span>Critical</span><strong>${results.npmAudit.vulnerabilities.critical}</strong></div><div class="metric"><span>High</span><strong>${results.npmAudit.vulnerabilities.high}</strong></div><div class="metric"><span>Moderate</span><strong>${results.npmAudit.vulnerabilities.moderate}</strong></div><div class="metric"><span>Low</span><strong>${results.npmAudit.vulnerabilities.low}</strong></div></div>`

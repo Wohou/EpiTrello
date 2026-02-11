@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Image from 'next/image'
 import { useLanguage } from '@/lib/language-context'
+import { useNotification } from '@/components/NotificationContext'
 import type { BoardMember } from '@/lib/supabase'
 import './BoardManageMenu.css'
 
@@ -32,6 +34,7 @@ export default function BoardManageMenu({
   const [success, setSuccess] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const { t } = useLanguage()
+  const { confirm } = useNotification()
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -72,7 +75,14 @@ export default function BoardManageMenu({
 
   const handleRevoke = async (userId: string, username: string) => {
     const confirmText = (t.sharing?.revokeConfirm || 'Êtes-vous sûr de vouloir retirer {name} du board ?').replace('{name}', username)
-    if (confirm(confirmText)) {
+    const confirmed = await confirm({
+      title: t.sharing?.manageBoard || 'Gérer le board',
+      message: confirmText,
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
+      variant: 'danger',
+    })
+    if (confirmed) {
       try {
         await onRevokeMember(userId)
         onRefreshMembers()
@@ -84,7 +94,14 @@ export default function BoardManageMenu({
   }
 
   const handleLeave = async () => {
-    if (confirm(t.sharing?.leaveConfirm || 'Êtes-vous sûr de vouloir quitter ce board ?')) {
+    const confirmed = await confirm({
+      title: t.sharing?.manageBoard || 'Gérer le board',
+      message: t.sharing?.leaveConfirm || 'Êtes-vous sûr de vouloir quitter ce board ?',
+      confirmText: t.common.logoutYes || 'Oui',
+      cancelText: t.common.cancel,
+      variant: 'danger',
+    })
+    if (confirmed) {
       try {
         await onLeaveBoard()
       } catch (err: unknown) {
@@ -203,7 +220,7 @@ export default function BoardManageMenu({
                       <div className="member-info">
                         <div className="member-avatar">
                           {member.avatar_url ? (
-                            <img src={member.avatar_url} alt={member.username} />
+                            <Image src={member.avatar_url} alt={member.username || 'Avatar'} width={32} height={32} />
                           ) : (
                             <span>{(member.username || 'U').charAt(0).toUpperCase()}</span>
                           )}
