@@ -16,11 +16,14 @@ const config: Config = {
   // For the coverage, we collect info on these files
   collectCoverage: true,
   collectCoverageFrom: [
-    'src/**/*.{js,jsx,ts,tsx}',
-    '!src/**/*.d.ts', // Not definition files
-    '!src/**/layout.tsx', // Hard to unit test
-    '!src/**/page.tsx',   // Hard to unit test
+    'components/**/*.{js,jsx,ts,tsx}',
+    'lib/**/*.{js,jsx,ts,tsx}',
+    'app/**/*.{js,jsx,ts,tsx}',
+    '!**/*.d.ts',
+    '!app/**/layout.tsx',
+    '!app/**/page.tsx',
   ],
+  coverageReporters: ['text', 'text-summary', 'json-summary', 'lcov'],
 }
 
 export default createJestConfig(config)

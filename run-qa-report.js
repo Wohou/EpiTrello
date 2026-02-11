@@ -8,13 +8,41 @@ const { exec } = require('child_process');
 const { readFile, writeFile } = require('fs/promises');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require('path');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const os = require('os');
+
+// Platform detection
+const isWindows = os.platform() === 'win32';
 
 // Project root
 const projectDir = path.join(__dirname, 'EpiTrello', 'stack1-nextjs');
 const outputPath = path.join(__dirname, 'qa-report.html');
-const run = (cmd, cwd = projectDir) => new Promise(resolve => {
-  const child = exec(cmd, { cwd, maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
-    resolve({ stdout, stderr, code: error?.code ?? 0 });
+
+
+// Convert a Windows path to a Docker-compatible mount path.
+function toDockerPath(p) {
+  if (!isWindows) return p;
+  const resolved = path.resolve(p);
+  return '/' + resolved.replace(/\\/g, '/').replace(/^([A-Za-z]):/, (_, letter) => letter.toLowerCase());
+}
+
+// Check if Docker daemon is running and accessible.
+async function isDockerAvailable() {
+  try {
+    const result = await run('docker info', __dirname);
+    return result.code === 0;
+  } catch {
+    return false;
+  }
+}
+
+const run = (cmd, cwd = projectDir, timeoutMs = 0) => new Promise(resolve => {
+  const opts = { cwd, maxBuffer: 20 * 1024 * 1024 };
+  if (timeoutMs > 0) opts.timeout = timeoutMs;
+  const child = exec(cmd, opts, (error, stdout, stderr) => {
+    const killed = error?.killed || false;
+    const code = killed ? 'TIMEOUT' : (error?.code ?? 0);
+    resolve({ stdout, stderr, code, killed });
   });
   child.stdin?.end();
 });
@@ -101,63 +129,114 @@ async function main() {
   };
 
   // 4) Trivy filesystem
-  const trivyMount = `"${projectDir.replace(/\\/g, '/')}:/scan"`;
-  const trivyFs = await run(`docker run --rm -v ${trivyMount} aquasec/trivy fs /scan --severity HIGH,CRITICAL --format json`);
-  let trivyFsCount = 0;
-  try {
-    const data = JSON.parse(trivyFs.stdout || '{}');
-    for (const r of data.Results || []) {
-      trivyFsCount += (r.Vulnerabilities || []).length;
-    }
-  } catch (err) {
-    trivyFsCount = -1;
-    console.log(err);
-  }
-  results.trivyFs = {
-    status: trivyFsCount === 0 ? 'PASS' : trivyFsCount > 0 ? 'WARN' : 'ERROR',
-    output: nonEmpty(`${trivyFs.stdout || ''}${trivyFs.stderr || ''}`),
-    vulnerabilities: trivyFsCount,
-  };
+  const dockerAvailable = await isDockerAvailable();
+  if (!dockerAvailable) {
+    const skipMsg = 'Docker daemon is not running. Skipping Trivy and OWASP ZAP scans.\nPlease start Docker Desktop and try again.';
+    results.trivyFs = { status: 'SKIP', output: skipMsg, vulnerabilities: -1 };
+    results.trivyImage = { status: 'SKIP', output: skipMsg, vulnerabilities: -1 };
+    results.owaspZap = { status: 'SKIP', output: skipMsg, failures: -1, warnings: 0, passes: 0 };
+  } else {
+    // --- Trivy Filesystem Scan ---
+    // Mount only the lockfiles for a fast dependency-only scan instead of the entire project tree
+    // (full tree via Docker volume on OneDrive/Windows is extremely slow).
+    const dockerProjectPath = toDockerPath(projectDir);
+    const trivyFsCmd = `docker run --rm -v "${dockerProjectPath}/package.json:/scan/package.json" -v "${dockerProjectPath}/package-lock.json:/scan/package-lock.json" aquasec/trivy fs /scan --severity HIGH,CRITICAL --format json`;
+    console.log(`Running Trivy FS: ${trivyFsCmd}`);
+    const trivyFs = await run(trivyFsCmd, __dirname, 120000); // 2 min timeout
+    const trivyFsOutput = `${trivyFs.stdout || ''}${trivyFs.stderr || ''}`;
+    let trivyFsCount = 0;
 
-  // 5) Trivy image
-  // Check if image exists first, then scan using local docker command
-  const trivyImage = await run('docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image --severity HIGH,CRITICAL --format json stack1-nextjs-nextjs-app:latest');
-  let trivyImgCount = 0;
-  try {
-    const data = JSON.parse(trivyImage.stdout || '{}');
-    for (const r of data.Results || []) {
-      trivyImgCount += (r.Vulnerabilities || []).length;
+    if (trivyFs.killed) {
+      trivyFsCount = -1;
+      console.log('Trivy FS scan timed out');
+    } else if (trivyFs.code !== 0 || trivyFsOutput.includes('error during connect')) {
+      trivyFsCount = -1;
+      console.log('Trivy FS scan failed:', trivyFsOutput.substring(0, 200));
+    } else {
+      try {
+        const data = JSON.parse(trivyFs.stdout || '{}');
+        for (const r of data.Results || []) {
+          trivyFsCount += (r.Vulnerabilities || []).length;
+        }
+      } catch (err) {
+        trivyFsCount = -1;
+        console.log('Trivy FS parse error:', err.message);
+      }
     }
-  } catch (err) {
-    trivyImgCount = -1;
-    console.log(err);
-  }
-  results.trivyImage = {
-    status: trivyImgCount === 0 ? 'PASS' : trivyImgCount > 0 ? 'WARN' : 'ERROR',
-    output: nonEmpty(`${trivyImage.stdout || ''}${trivyImage.stderr || ''}`),
-    vulnerabilities: trivyImgCount,
-  };
+    results.trivyFs = {
+      status: trivyFsCount === 0 ? 'PASS' : trivyFsCount > 0 ? 'WARN' : 'ERROR',
+      output: nonEmpty(trivyFsOutput),
+      vulnerabilities: trivyFsCount,
+    };
 
-  // 6) OWASP ZAP
-  // Requires the app to be running on localhost:3000
-  const zap = await run('docker run --rm --network host -t ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t http://localhost:3000', path.join(__dirname));
-  let zapFail = 0, zapWarn = 0, zapPass = 0;
-  try {
-    const out = zap.stdout || '';
-    zapFail = Number((out.match(/FAIL-NEW: (\d+)/) || [])[1] || 0);
-    zapWarn = Number((out.match(/WARN-NEW: (\d+)/) || [])[1] || 0);
-    zapPass = Number((out.match(/PASS: (\d+)/) || [])[1] || 0);
-  } catch (err) {
-    zapFail = -1;
-    console.log(err);
+    // --- Trivy Docker Image Scan ---
+    // Use the Docker socket mount appropriate for the platform
+    const socketMount = isWindows
+      ? '//var/run/docker.sock:/var/run/docker.sock'
+      : '/var/run/docker.sock:/var/run/docker.sock';
+    const trivyImageCmd = `docker run --rm -v ${socketMount} aquasec/trivy image --severity HIGH,CRITICAL --format json stack1-nextjs-nextjs-app:latest`;
+    console.log(`Running Trivy Image: ${trivyImageCmd}`);
+    const trivyImage = await run(trivyImageCmd, __dirname, 180000); // 3 min timeout
+    const trivyImageOutput = `${trivyImage.stdout || ''}${trivyImage.stderr || ''}`;
+    let trivyImgCount = 0;
+
+    if (trivyImage.killed) {
+      trivyImgCount = -1;
+      console.log('Trivy Image scan timed out');
+    } else if (trivyImage.code !== 0 || trivyImageOutput.includes('error during connect')) {
+      trivyImgCount = -1;
+      console.log('Trivy Image scan failed:', trivyImageOutput.substring(0, 200));
+    } else {
+      try {
+        const data = JSON.parse(trivyImage.stdout || '{}');
+        for (const r of data.Results || []) {
+          trivyImgCount += (r.Vulnerabilities || []).length;
+        }
+      } catch (err) {
+        trivyImgCount = -1;
+        console.log('Trivy Image parse error:', err.message);
+      }
+    }
+    results.trivyImage = {
+      status: trivyImgCount === 0 ? 'PASS' : trivyImgCount > 0 ? 'WARN' : 'ERROR',
+      output: nonEmpty(trivyImageOutput),
+      vulnerabilities: trivyImgCount,
+    };
+
+    // --- OWASP ZAP ---
+    // On Windows/macOS Docker Desktop, --network host doesn't work.
+    // Use host.docker.internal to reach the host's localhost.
+    const zapTarget = isWindows || os.platform() === 'darwin'
+      ? 'http://host.docker.internal:3000'
+      : 'http://localhost:3000';
+    const zapCmd = `docker run --rm ${isWindows || os.platform() === 'darwin' ? '' : '--network host '}ghcr.io/zaproxy/zaproxy:stable zap-baseline.py -t ${zapTarget}`;
+    console.log(`Running OWASP ZAP: ${zapCmd}`);
+    const zap = await run(zapCmd, __dirname, 180000); // 3 min timeout
+    const zapOutput = `${zap.stdout || ''}${zap.stderr || ''}`;
+    let zapFail = 0, zapWarn = 0, zapPass = 0;
+
+    if (zapOutput.includes('error during connect') || zapOutput.includes('Cannot connect')) {
+      zapFail = -1;
+      console.log('OWASP ZAP scan failed:', zapOutput.substring(0, 200));
+    } else {
+      try {
+        const out = zap.stdout || '';
+        zapFail = Number((out.match(/FAIL-NEW: (\d+)/) || [])[1] || 0);
+        zapWarn = Number((out.match(/WARN-NEW: (\d+)/) || [])[1] || 0);
+        zapPass = Number((out.match(/PASS: (\d+)/) || [])[1] || 0);
+      } catch (err) {
+        zapFail = -1;
+        console.log('OWASP ZAP parse error:', err.message);
+      }
+    }
+    results.owaspZap = {
+      status: zapFail === 0 && !zapOutput.includes('error during connect') ? 'PASS' : zapFail > 0 ? 'WARN' : 'ERROR',
+      output: nonEmpty(zapOutput),
+      failures: zapFail,
+      warnings: zapWarn,
+      passes: zapPass,
+    };
   }
-  results.owaspZap = {
-    status: zapFail === 0 ? 'PASS' : zapFail > 0 ? 'WARN' : 'ERROR',
-    output: nonEmpty(`${zap.stdout || ''}${zap.stderr || ''}`),
-    failures: zapFail,
-    warnings: zapWarn,
-    passes: zapPass,
-  };
 
   const sections = [
     { key: 'eslint', title: 'ESLint - Code Quality' },
