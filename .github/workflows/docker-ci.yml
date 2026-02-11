@@ -110,7 +110,7 @@ jobs:
       - name: Scan Docker image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: 'epitrello-stack1-nextjs-app:latest'
+          image-ref: 'stack1-nextjs-nextjs-app:latest'
           format: 'table'
           severity: 'HIGH,CRITICAL'
           exit-code: '0'
