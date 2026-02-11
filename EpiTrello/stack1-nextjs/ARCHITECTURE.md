@@ -581,3 +581,261 @@ services:
 - **Modern Tooling**: Latest React and Next.js features
 
 ---
+
+## GitHub Power-Up
+
+The GitHub Power-Up is an integration that connects EpiTrello cards to GitHub issues, enabling bidirectional synchronization between the two platforms.
+
+### Overview
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                      GitHub Power-Up                             │
+│                                                                  │
+│  ┌──────────┐    ┌──────────────┐    ┌────────────────────────┐  │
+│  │  Card UI  │───▶│ API Routes   │───▶│  GitHub API            │  │
+│  │ (Popup)   │◀──│ /cards/[id]/ │◀──│  (repos, issues, hooks) │  │
+│  └──────────┘    │   github     │    └────────────────────────┘  │
+│       │          └──────────────┘              │                 │
+│       │                │                       │                 │
+│       │          ┌─────▼──────┐          ┌─────▼──────┐          │
+│       │          │  Supabase  │          │  Webhook   │          │
+│       └──────────│    DB      │◀─────────│  Listener  │          │
+│    (broadcast)   │            │          │ /api/webhooks│         │
+│                  └────────────┘          │  /github    │          │
+│                                         └────────────┘          │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Connect GitHub account** | OAuth link/unlink via Supabase Auth (`provider: 'github'`, scope `repo`) |
+| **Link existing issue** | Browse user repos and select an open issue to attach to a card |
+| **Create & link issue** | Create a new issue on GitHub and automatically link it |
+| **Toggle issue state** | Open/close a linked issue directly from EpiTrello |
+| **Unlink issue** | Remove the association between a card and an issue |
+| **Auto-completion** | Card `is_completed` is set to `true` when **all** linked issues are closed |
+| **Automatic webhooks** | A webhook is created on the GitHub repo the first time an issue is linked |
+| **Real-time sync** | GitHub issue state changes are reflected on the board via Supabase Broadcast |
+
+### Architecture
+
+#### File Structure
+
+```
+app/
+  api/
+    github/
+      connect/route.ts    # GitHub OAuth connection (GET/POST/DELETE)
+      token/route.ts      # Proxy to get GitHub provider_token (GET)
+    cards/[id]/
+      github/route.ts     # Card-issue CRUD + webhook auto-creation (GET/POST/DELETE/PATCH)
+    webhooks/
+      github/route.ts     # Inbound GitHub webhook handler + broadcast (POST)
+components/
+  GitHubPowerUp.tsx       # UI popup (link, create, toggle, unlink)
+  GitHubPowerUp.css       # Popup styles
+lib/
+  api-utils.ts            # requireAuth(), getGitHubIdentity(), getGitHubToken()
+  github-utils.ts         # updateCardCompletion()
+```
+
+#### Database Tables
+
+##### `card_github_links`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | Primary key |
+| `card_id` | uuid | FK → `cards.id` |
+| `github_type` | text | `'issue'` or `'pull_request'` |
+| `github_repo_owner` | text | Repository owner (e.g. `octocat`) |
+| `github_repo_name` | text | Repository name (e.g. `Hello-World`) |
+| `github_number` | integer | Issue/PR number |
+| `github_url` | text | Full URL to the issue on GitHub |
+| `github_title` | text | Issue title at time of linking |
+| `github_state` | text | `'open'` or `'closed'` (synced by webhook) |
+| `synced_at` | timestamptz | Last sync timestamp |
+| `created_by` | uuid | FK → `auth.users.id` |
+| `created_at` | timestamptz | Creation timestamp |
+
+**Unique constraint**: `(card_id, github_repo_owner, github_repo_name, github_number)` — prevents duplicate links.
+
+##### `github_webhooks`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | Primary key |
+| `user_id` | uuid | FK → `auth.users.id` |
+| `repo_owner` | text | Repository owner |
+| `repo_name` | text | Repository name |
+| `webhook_id` | text | GitHub webhook ID |
+| `is_active` | boolean | Whether the webhook is active |
+| `last_ping_at` | timestamptz | Last ping timestamp |
+
+**Unique constraint**: `(user_id, repo_owner, repo_name)` — one webhook per user per repo.
+
+##### `cards.is_completed`
+
+A boolean column on the `cards` table. Set to `true` when all linked issues are closed, `false` otherwise. Updated by `updateCardCompletion()`.
+
+### API Endpoints
+
+#### `GET /api/github/connect`
+
+Check if the current user has GitHub linked.
+
+**Response:**
+```json
+{
+  "connected": true,
+  "github_username": "octocat",
+  "connected_at": "2024-01-01T00:00:00Z",
+  "hasRepoScope": true
+}
+```
+
+#### `POST /api/github/connect`
+
+Initiate or verify GitHub connection. Returns `{ needsLinking: true }` if no GitHub identity, `{ needsReauth: true }` if token expired, or `{ success: true }` if already connected.
+
+#### `DELETE /api/github/connect`
+
+Unlinks the GitHub identity from the user's Supabase account and clears `github_username` from the profile.
+
+#### `GET /api/github/token`
+
+Returns the GitHub OAuth `provider_token` from the user's session. Used by the frontend to call the GitHub API directly.
+
+**Response:**
+```json
+{ "token": "gho_xxx...", "username": "octocat" }
+```
+
+#### `GET /api/cards/[id]/github`
+
+Returns all GitHub links for a card.
+
+#### `POST /api/cards/[id]/github`
+
+Links a GitHub issue to a card. Automatically calls `ensureWebhookExists()` to create a webhook on the repository if the user has admin access.
+
+**Request body:**
+```json
+{
+  "github_type": "issue",
+  "github_repo_owner": "octocat",
+  "github_repo_name": "Hello-World",
+  "github_number": 42,
+  "github_url": "https://github.com/octocat/Hello-World/issues/42",
+  "github_title": "Fix bug",
+  "github_state": "open"
+}
+```
+
+**Response** includes `webhook` field indicating creation result:
+- `{ "created": true }` — webhook created successfully
+- `{ "reason": "already_exists" }` — webhook already present
+- `{ "reason": "no_admin_permission" }` — user lacks admin access to the repo
+
+#### `PATCH /api/cards/[id]/github`
+
+Updates a link's `github_state` (called after toggling issue state from UI). Also triggers `updateCardCompletion()`.
+
+#### `DELETE /api/cards/[id]/github?linkId=xxx`
+
+Removes a card-issue link. Triggers `updateCardCompletion()`.
+
+#### `POST /api/webhooks/github`
+
+Receives inbound GitHub webhook events. Workflow:
+
+1. **Verify signature** — HMAC-SHA256 with `GITHUB_WEBHOOK_SECRET`
+2. **Handle `ping`** — Respond with `pong` (sent when webhook is first created)
+3. **Handle `issues`** — For `opened`, `closed`, `reopened` actions:
+   a. Find all `card_github_links` matching the repo + issue number
+   b. Update `github_state` and `synced_at` on each matching link
+   c. Call `updateCardCompletion()` for each affected card
+   d. Find affected board IDs (card → list → board)
+   e. **Broadcast** a `github-update` event to each board's Supabase channel
+
+### Webhook Flow
+
+```
+GitHub (issue closed)
+    │
+    ▼
+POST /api/webhooks/github
+    │
+    ├─ Verify HMAC-SHA256 signature
+    │
+    ├─ Find matching card_github_links
+    │
+    ├─ UPDATE card_github_links SET github_state='closed'
+    │
+    ├─ updateCardCompletion() → cards.is_completed = true/false
+    │
+    └─ Broadcast 'github-update' to board-{id} channels
+         │
+         ▼
+    BoardView.tsx receives broadcast → re-fetches board data
+```
+
+### Real-Time Sync (Supabase Broadcast)
+
+Since `postgres_changes` is not reliable in all Supabase environments, the real-time sync uses **Supabase Broadcast** as the transport mechanism:
+
+**Server side** (`/api/webhooks/github/route.ts`):
+1. After updating the DB, resolves board IDs for all affected cards
+2. For each board, subscribes to channel `board-{boardId}`
+3. Sends a broadcast event `github-update` with `{ action, issueNumber, newState }`
+4. Cleans up the channel
+
+**Client side** (`BoardView.tsx`):
+- The board's realtime channel includes a `.on('broadcast', { event: 'github-update' }, callback)` listener
+- When received, triggers a debounced full board data re-fetch
+
+### Card Completion Logic
+
+Implemented in `lib/github-utils.ts` → `updateCardCompletion()`:
+
+```
+IF card has no linked issues → is_completed = false
+IF ALL linked issues have github_state = 'closed' → is_completed = true
+IF ANY linked issue has github_state ≠ 'closed' → is_completed = false
+```
+
+This function is called on every operation that modifies links or states: link, unlink, toggle, webhook update.
+
+### Auto-Webhook Creation
+
+When a user links an issue to a card (`POST /api/cards/[id]/github`), `ensureWebhookExists()` runs:
+
+1. Checks if a webhook already exists on the repo pointing to our endpoint
+2. If not, creates one with `events: ['issues']` and the configured secret
+3. Stores the webhook reference in `github_webhooks` table
+4. Requires the user to have **admin** access to the repository
+
+If the user doesn't have admin permissions, linking still works — only automatic webhook creation is skipped and a warning is logged.
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anonymous key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key (server-side only, used by webhook handler) |
+| `NEXT_PUBLIC_APP_URL` | Yes | Public app URL (used as webhook callback URL) |
+| `GITHUB_WEBHOOK_SECRET` | Yes | Shared secret for HMAC-SHA256 webhook signature verification |
+
+### Security
+
+- **Webhook verification**: Every inbound webhook is verified via HMAC-SHA256 (`x-hub-signature-256` header) using `GITHUB_WEBHOOK_SECRET`
+- **Service role isolation**: The webhook handler uses `SUPABASE_SERVICE_ROLE_KEY` to bypass RLS, as it operates without a user session
+- **Auth-protected API routes**: All `/api/github/*` and `/api/cards/[id]/github` routes require authentication via `requireAuth()`
+- **Token proxying**: The GitHub `provider_token` is never exposed to the client directly — it's served via `/api/github/token` which requires auth
+- **Unique constraints**: Database prevents duplicate issue links on the same card
+
+---

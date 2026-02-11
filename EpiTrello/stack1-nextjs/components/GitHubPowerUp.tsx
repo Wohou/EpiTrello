@@ -41,12 +41,16 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
   // Realtime subscription
   const channelRef = useRef<RealtimeChannel | null>(null)
 
+  // Data fetching
   useEffect(() => {
     checkGitHubConnection()
     if (connected) {
       fetchLinkedIssues()
     }
+  }, [connected, cardId])
 
+  // Realtime subscription (separate to avoid SUBSCRIBED→CLOSED→SUBSCRIBED)
+  useEffect(() => {
     const channel = supabaseBrowser
       .channel(`card-github-${cardId}`)
       .on(
@@ -73,7 +77,7 @@ export default function GitHubPowerUp({ cardId, onClose, onUpdate }: GitHubPower
         supabaseBrowser.removeChannel(channelRef.current)
       }
     }
-  }, [connected, cardId])
+  }, [cardId])
 
   const checkGitHubConnection = async () => {
     try {

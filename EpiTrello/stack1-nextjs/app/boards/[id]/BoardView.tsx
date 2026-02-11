@@ -113,6 +113,14 @@ export default function BoardView({ boardId }: BoardViewProps) {
         }
       )
       .on(
+        'broadcast',
+        { event: 'github-update' },
+        (payload) => {
+          console.log('📢 Broadcast: GitHub update received', payload)
+          debouncedFetchBoardData()
+        }
+      )
+      .on(
         'postgres_changes',
         {
           event: 'UPDATE',

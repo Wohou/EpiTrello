@@ -82,6 +82,48 @@ async function handleIssueEvent(payload: GitHubWebhookPayload) {
         await updateCardCompletion(supabase, link.card_id)
     }
 
+    // Find affected boards and broadcast to them
+    const boardIds = new Set<string>()
+    for (const link of links) {
+        const { data: card } = await supabase
+            .from('cards')
+            .select('list_id')
+            .eq('id', link.card_id)
+            .single()
+        if (card) {
+            const { data: list } = await supabase
+                .from('lists')
+                .select('board_id')
+                .eq('id', card.list_id)
+                .single()
+            if (list) boardIds.add(list.board_id)
+        }
+    }
+
+    for (const bid of boardIds) {
+        const channel = supabase.channel(`board-${bid}`)
+        await new Promise<void>((resolve) => {
+            const timeout = setTimeout(() => {
+                supabase.removeChannel(channel)
+                resolve()
+            }, 5000)
+            channel.subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    clearTimeout(timeout)
+                    channel.send({
+                        type: 'broadcast',
+                        event: 'github-update',
+                        payload: { action, issueNumber, newState }
+                    }).then(() => {
+                        console.log(`📢 Broadcast github-update to board-${bid}`)
+                        supabase.removeChannel(channel)
+                        resolve()
+                    })
+                }
+            })
+        })
+    }
+
     return {
         processed: true,
         cardsUpdated: links.length,
