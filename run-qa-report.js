@@ -29,7 +29,7 @@ function toDockerPath(p) {
 // Check if Docker daemon is running and accessible.
 async function isDockerAvailable() {
   try {
-    const result = await run('docker info', __dirname);
+    const result = await run('docker ps', __dirname);
     return result.code === 0;
   } catch {
     return false;
