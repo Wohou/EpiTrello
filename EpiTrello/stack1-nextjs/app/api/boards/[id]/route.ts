@@ -96,10 +96,48 @@ export async function GET(
 
             if (linksError) throw linksError
 
+            // Fetch card assignments with profile data
+            const { data: assignments } = await supabaseAdmin
+              .from('card_assignments')
+              .select('*')
+              .eq('card_id', card.id)
+              .order('assigned_at', { ascending: true })
+
+            const enrichedAssignments = await Promise.all(
+              (assignments || []).map(async (a) => {
+                const { data: profile } = await supabaseAdmin
+                  .from('profiles')
+                  .select('username, avatar_url')
+                  .eq('id', a.user_id)
+                  .single()
+                return {
+                  ...a,
+                  username: profile?.username || 'Unknown',
+                  avatar_url: profile?.avatar_url || null,
+                }
+              })
+            )
+
+            // Fetch card images
+            const { data: cardImages } = await supabaseAdmin
+              .from('card_images')
+              .select('*')
+              .eq('card_id', card.id)
+              .order('position', { ascending: true })
+
+            // Fetch comment count
+            const { count: commentCount } = await supabaseAdmin
+              .from('card_comments')
+              .select('*', { count: 'exact', head: true })
+              .eq('card_id', card.id)
+
             return {
               ...card,
               github_links: githubLinks || [],
-              github_links_count: githubLinks?.length || 0
+              github_links_count: githubLinks?.length || 0,
+              assignments: enrichedAssignments,
+              images: cardImages || [],
+              comment_count: commentCount || 0,
             }
           })
         )

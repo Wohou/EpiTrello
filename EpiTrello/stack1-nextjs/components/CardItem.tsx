@@ -4,8 +4,9 @@ import { useState, useRef, useEffect, ChangeEvent } from 'react'
 import Image from 'next/image'
 import { useLanguage } from '@/lib/language-context'
 import { useNotification } from '@/components/NotificationContext'
-import type { Card } from '@/lib/supabase'
+import type { Card, BoardMember, CardAssignment, CardImage } from '@/lib/supabase'
 import GitHubPowerUp from './GitHubPowerUp'
+import CardDetailModal from './CardDetailModal'
 import './CardItem.css'
 
 interface CardLog {
@@ -22,6 +23,8 @@ interface CardItemProps {
   onDelete: () => void
   onUpdate: (updates: Partial<Card>) => void
   isSharedBoard?: boolean
+  boardId?: string
+  boardMembers?: BoardMember[]
 }
 
 const CARD_COLORS = [
@@ -88,7 +91,7 @@ const generateGoogleCalendarUrl = (
   return `https://calendar.google.com/calendar/render?${params.toString()}`
 }
 
-export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
+export default function CardItem({ card, onDelete, onUpdate, boardMembers = [] }: CardItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [title, setTitle] = useState(card.title)
   const [description, setDescription] = useState(card.description || '')
@@ -96,10 +99,22 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
   const [showColorPicker, setShowColorPicker] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 })
   const [uploading, setUploading] = useState(false)
-  const [showImageModal, setShowImageModal] = useState(false)
+
   const [showLogModal, setShowLogModal] = useState(false)
   const [showDateModal, setShowDateModal] = useState(false)
   const [showGitHubPowerUp, setShowGitHubPowerUp] = useState(false)
+  const [showAssignModal, setShowAssignModal] = useState(false)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [cardAssignments, setCardAssignments] = useState<CardAssignment[]>(
+    ((card as unknown as Record<string, unknown>).assignments as CardAssignment[]) || []
+  )
+  const [cardImages, setCardImages] = useState<CardImage[]>(
+    ((card as unknown as Record<string, unknown>).images as CardImage[]) || []
+  )
+  const [commentCount, setCommentCount] = useState<number>(
+    ((card as unknown as Record<string, unknown>).comment_count as number) || 0
+  )
+  const [togglingUser, setTogglingUser] = useState<string | null>(null)
   const [cardLog, setCardLog] = useState<CardLog | null>(null)
   const [loadingLog, setLoadingLog] = useState(false)
   const [tempStartDate, setTempStartDate] = useState<string>(card.start_date ? new Date(card.start_date).toISOString().split('T')[0] : '')
@@ -110,6 +125,20 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { t } = useLanguage()
   const { confirm, alert } = useNotification()
+
+  // Sync assignments and images from card prop when it changes
+  useEffect(() => {
+    const cardAny = card as unknown as Record<string, unknown>
+    if (cardAny.assignments) {
+      setCardAssignments(cardAny.assignments as CardAssignment[])
+    }
+    if (cardAny.images) {
+      setCardImages(cardAny.images as CardImage[])
+    }
+    if (typeof cardAny.comment_count === 'number') {
+      setCommentCount(cardAny.comment_count as number)
+    }
+  }, [card])
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -186,8 +215,10 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
         throw new Error('Upload failed')
       }
 
-      const { url } = await response.json()
-      onUpdate({ cover_image: url })
+      const { images } = await response.json()
+      if (images) {
+        setCardImages(images)
+      }
       setShowMenu(false)
     } catch (error) {
       console.error('Error uploading image:', error)
@@ -205,8 +236,20 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
     setShowMenu(false)
   }
 
-  const handleRemoveImage = () => {
-    onUpdate({ cover_image: null })
+  const handleRemoveImage = async () => {
+    try {
+      const response = await fetch(`/api/cards/${card.id}/images`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ all: true }),
+      })
+      if (response.ok) {
+        setCardImages([])
+        onUpdate({ cover_image: null })
+      }
+    } catch (error) {
+      console.error('Error removing images:', error)
+    }
     setShowMenu(false)
   }
 
@@ -232,8 +275,8 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
   }
 
   const handleCardClick = () => {
-    if (!showMenu && card.cover_image) {
-      setShowImageModal(true)
+    if (!showMenu) {
+      setShowDetailModal(true)
     }
   }
 
@@ -262,6 +305,54 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
     } catch (error) {
       console.error('Error syncing to GitHub:', error)
     }
+  }
+
+  const handleOpenAssignModal = () => {
+    setShowAssignModal(true)
+    setShowMenu(false)
+  }
+
+  const handleToggleAssignment = async (userId: string) => {
+    setTogglingUser(userId)
+    try {
+      const response = await fetch(`/api/cards/${card.id}/assignments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setCardAssignments(data.assignments)
+      } else {
+        await alert({
+          message: t.cards.assignError || 'Error assigning member',
+          variant: 'error',
+        })
+      }
+    } catch (error) {
+      console.error('Error toggling assignment:', error)
+      await alert({
+        message: t.cards.assignError || 'Error assigning member',
+        variant: 'error',
+      })
+    } finally {
+      setTogglingUser(null)
+    }
+  }
+
+  const isUserAssigned = (userId: string) => {
+    return cardAssignments.some((a) => a.user_id === userId)
+  }
+
+  const getInitials = (name: string | undefined | null): string => {
+    if (!name) return '?'
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
   }
 
   const handleShowLog = async () => {
@@ -405,9 +496,12 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
       {card.cover_color && (
         <div className="card-cover" style={{ backgroundColor: card.cover_color }} />
       )}
-      {card.cover_image && (
+      {cardImages.length > 0 && (
         <div className="card-cover-image">
-          <Image src={card.cover_image} alt="Cover" width={300} height={160} style={{ width: '100%', height: 'auto' }} />
+          <Image src={cardImages[0].url} alt="Cover" width={300} height={160} style={{ width: '100%', height: 'auto' }} />
+          {cardImages.length > 1 && (
+            <span className="card-images-count">🖼️ {cardImages.length}</span>
+          )}
         </div>
       )}
       <div className="card-content">
@@ -462,6 +556,45 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
             {(card as { github_links_count: number }).github_links_count}
           </div>
         )}
+
+        {/* Comment Count Badge */}
+        {commentCount > 0 && (
+          <div className="comment-badge" title={`${commentCount} comment(s)`}>
+            💬 {commentCount}
+          </div>
+        )}
+
+        {/* Assigned Users Avatars */}
+        {cardAssignments.length > 0 && (
+          <div className="card-assignees">
+            {cardAssignments.slice(0, 3).map((assignment) => (
+              <div
+                key={assignment.user_id}
+                className="card-assignee-avatar"
+                title={assignment.username || '?'}
+              >
+                {assignment.avatar_url ? (
+                  <Image
+                    src={assignment.avatar_url}
+                    alt={assignment.username || '?'}
+                    width={24}
+                    height={24}
+                    className="assignee-avatar-img"
+                  />
+                ) : (
+                  <span className="assignee-initials">
+                    {getInitials(assignment.username)}
+                  </span>
+                )}
+              </div>
+            ))}
+            {cardAssignments.length > 3 && (
+              <div className="card-assignee-avatar card-assignee-more" title={`+${cardAssignments.length - 3}`}>
+                <span className="assignee-initials">+{cardAssignments.length - 3}</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Hidden file input for image upload */}
@@ -496,6 +629,11 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
             <button className="menu-item" onClick={handleOpenDateModal}>
               <span className="menu-icon">📅</span>
               {t.cards.setDates || 'Définir les dates'}
+            </button>
+
+            <button className="menu-item" onClick={handleOpenAssignModal}>
+              <span className="menu-icon">👤</span>
+              {t.cards.assignTasks || 'Assign members'}
             </button>
 
             <button
@@ -543,10 +681,10 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
               disabled={uploading}
             >
               <span className="menu-icon">🖼️</span>
-              {uploading ? t.cards.uploading : (card.cover_image ? t.cards.changeImage : t.cards.addImage)}
+              {uploading ? t.cards.uploading : `+ ${t.cards.addImage}`}
             </button>
 
-            {card.cover_image && (
+            {cardImages.length > 0 && (
               <button
                 className="menu-item"
                 onClick={(e) => {
@@ -600,24 +738,6 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
         )}
       </div>
 
-      {/* Image Lightbox Modal */}
-      {showImageModal && card.cover_image && (
-        <div
-          className="image-modal-overlay"
-          onClick={() => setShowImageModal(false)}
-        >
-          <div className="image-modal-content" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="image-modal-close"
-              onClick={() => setShowImageModal(false)}
-            >
-              ✕
-            </button>
-            <Image src={card.cover_image} alt={card.title} width={800} height={600} style={{ width: '100%', height: 'auto' }} unoptimized />
-            <div className="image-modal-title">{card.title}</div>
-          </div>
-        </div>
-      )}
 
       {/* Card Activity Log Modal */}
       {showLogModal && (
@@ -779,6 +899,127 @@ export default function CardItem({ card, onDelete, onUpdate}: CardItemProps) {
           onClose={() => setShowGitHubPowerUp(false)}
           onUpdate={() => onUpdate({})}
         />
+      )}
+
+      {/* Card Detail Modal */}
+      {showDetailModal && (
+        <CardDetailModal
+          card={card}
+          onClose={() => setShowDetailModal(false)}
+          onUpdate={(updates) => {
+            onUpdate(updates)
+          }}
+          onDelete={onDelete}
+          boardMembers={boardMembers}
+          cardAssignments={cardAssignments}
+          onToggleAssignment={handleToggleAssignment}
+          togglingUser={togglingUser}
+          cardImages={cardImages}
+          onImagesChange={setCardImages}
+          onCommentCountChange={setCommentCount}
+        />
+      )}
+
+      {/* Assignment Modal */}
+      {showAssignModal && (
+        <div
+          className="image-modal-overlay"
+          onClick={() => setShowAssignModal(false)}
+        >
+          <div className="assign-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="image-modal-close"
+              onClick={() => setShowAssignModal(false)}
+            >
+              ✕
+            </button>
+            <h3>👤 {t.cards.assignTasks || 'Assign members'}</h3>
+
+            <div className="assign-modal-content">
+              {boardMembers.length === 0 ? (
+                <div className="assign-empty">
+                  {t.cards.loadingMembers || 'Loading members...'}
+                </div>
+              ) : (
+                <div className="assign-members-list">
+                  <div className="assign-section-label">
+                    {t.cards.boardMembers || 'Board members'}
+                  </div>
+                  {boardMembers.map((member) => {
+                    const assigned = isUserAssigned(member.user_id)
+                    const toggling = togglingUser === member.user_id
+                    return (
+                      <button
+                        key={member.user_id}
+                        className={`assign-member-row ${assigned ? 'assigned' : ''} ${toggling ? 'toggling' : ''}`}
+                        onClick={() => handleToggleAssignment(member.user_id)}
+                        disabled={toggling}
+                      >
+                        <div className="assign-member-avatar">
+                          {member.avatar_url ? (
+                            <Image
+                              src={member.avatar_url}
+                              alt={member.username || '?'}
+                              width={32}
+                              height={32}
+                              className="assign-avatar-img"
+                            />
+                          ) : (
+                            <span className="assign-avatar-initials">
+                              {getInitials(member.username)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="assign-member-info">
+                          <span className="assign-member-name">{member.username || '?'}</span>
+                          {member.role === 'owner' && (
+                            <span className="assign-member-role">{t.sharing.owner || 'Owner'}</span>
+                          )}
+                        </div>
+                        <div className={`assign-checkbox ${assigned ? 'checked' : ''}`}>
+                          {assigned && <span className="assign-check-icon">✓</span>}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Show currently assigned members */}
+              {cardAssignments.length > 0 && (
+                <div className="assign-current-section">
+                  <div className="assign-section-label">
+                    {t.cards.assignedMembers || 'Assigned members'} ({cardAssignments.length})
+                  </div>
+                  <div className="assign-current-avatars">
+                    {cardAssignments.map((a) => (
+                      <div
+                        key={a.user_id}
+                        className="assign-current-chip"
+                        title={a.username || '?'}
+                      >
+                        {a.avatar_url ? (
+                          <Image
+                            src={a.avatar_url}
+                            alt={a.username || '?'}
+                            width={24}
+                            height={24}
+                            className="assign-chip-avatar"
+                          />
+                        ) : (
+                          <span className="assign-chip-initials">
+                            {getInitials(a.username)}
+                          </span>
+                        )}
+                        <span className="assign-chip-name">{a.username}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

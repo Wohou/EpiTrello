@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,25 +81,61 @@ export async function POST(request: NextRequest) {
       .from('cards')
       .getPublicUrl(filePath)
 
-    // Update card with image URL
-    const { error: updateError } = await supabase
-      .from('cards')
-      .update({
-        cover_image: publicUrl,
-        cover_color: null, // Remove color when adding image
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', cardId)
+    // Insert into card_images table (multi-image support)
+    const supabaseAdmin = getSupabaseAdmin()
 
-    if (updateError) {
-      console.error('Update error:', updateError)
+    // Get current max position for this card
+    const { data: existingImages } = await supabaseAdmin
+      .from('card_images')
+      .select('position')
+      .eq('card_id', cardId)
+      .order('position', { ascending: false })
+      .limit(1)
+
+    const nextPosition = existingImages && existingImages.length > 0 ? existingImages[0].position + 1 : 0
+
+    const { error: insertError } = await supabaseAdmin
+      .from('card_images')
+      .insert({
+        card_id: cardId,
+        url: publicUrl,
+        position: nextPosition,
+        uploaded_by: user.id,
+      })
+
+    if (insertError) {
+      console.error('Insert error:', insertError)
       return NextResponse.json(
-        { error: 'Failed to update card' },
+        { error: 'Failed to save image record' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ url: publicUrl })
+    // Also set cover_image to the first image if card has no cover_image yet
+    const { data: card } = await supabaseAdmin
+      .from('cards')
+      .select('cover_image')
+      .eq('id', cardId)
+      .single()
+
+    if (card && !card.cover_image) {
+      await supabaseAdmin
+        .from('cards')
+        .update({
+          cover_image: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', cardId)
+    }
+
+    // Return all images for this card
+    const { data: allImages } = await supabaseAdmin
+      .from('card_images')
+      .select('*')
+      .eq('card_id', cardId)
+      .order('position', { ascending: true })
+
+    return NextResponse.json({ url: publicUrl, images: allImages || [] })
   } catch (error: unknown) {
     console.error('Error uploading card image:', error)
     const errorMessage = error instanceof Error ? error.message : 'Failed to upload image'
