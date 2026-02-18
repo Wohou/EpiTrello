@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabaseBrowser } from '@/lib/supabase-browser'
 import { useLanguage } from '@/lib/language-context'
 import CreateBoardModal from '@/components/CreateBoardModal'
@@ -100,6 +101,9 @@ export default function BoardList() {
           <button className="create-button" onClick={() => setIsModalOpen(true)}>
             {t.boards.createBoard}
           </button>
+          <Link href="/guide" className="help-button" title={t.guide.tooltip}>
+            ?
+          </Link>
           <ProfileMenu username={username} userEmail={userEmail} avatarUrl={avatarUrl} />
         </div>
       </div>

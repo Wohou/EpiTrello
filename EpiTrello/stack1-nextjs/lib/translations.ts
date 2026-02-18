@@ -340,6 +340,86 @@ export const translations = {
       issueTitlePlaceholder: 'Titre de l\'issue...',
       issueDescriptionPlaceholder: 'Description de l\'issue...',
     },
+
+    // User Guide
+    guide: {
+      tooltip: 'Guide utilisateur',
+      title: 'Guide Utilisateur EpiTrello',
+      subtitle: 'Tout ce que vous devez savoir pour maîtriser EpiTrello',
+      backToBoards: '← Retour aux boards',
+      tableOfContents: 'Table des matières',
+      languageToggle: 'English',
+
+      // Sections
+      gettingStartedTitle: '🚀 Démarrage rapide',
+      gettingStartedDesc: 'EpiTrello est un outil de gestion de projet visuel inspiré de Trello. Il vous permet d\'organiser vos tâches et projets à l\'aide de boards, de listes et de cartes. Voici comment commencer.',
+
+      boardsTitle: '📋 Les Boards',
+      boardsWhat: 'Un board (tableau) représente un projet ou un espace de travail. C\'est le conteneur principal qui regroupe toutes vos listes et cartes.',
+      boardsCreate: 'Cliquez sur le bouton « Créer un board » en haut à droite de la page d\'accueil. Donnez-lui un titre et une description optionnelle.',
+      boardsEdit: 'Pour modifier ou supprimer un board, survolez sa carte et un menu d\'options apparaîtra.',
+      boardsShare: 'Vous pouvez inviter d\'autres utilisateurs à collaborer sur un board en partageant votre ID utilisateur (trouvable dans les Paramètres) ou en utilisant le menu de gestion du board.',
+      boardsActions: 'Actions possibles : créer, renommer, supprimer, inviter des membres, quitter un board partagé.',
+
+      listsTitle: '📝 Les Listes',
+      listsWhat: 'Une liste est une colonne dans votre board. Elle représente une étape, une catégorie ou un état (ex : « À faire », « En cours », « Terminé »).',
+      listsCreate: 'Cliquez sur « + Ajouter une autre liste » à droite de vos listes existantes. Entrez un titre et validez.',
+      listsEdit: 'Cliquez sur le titre d\'une liste pour le modifier directement. Les listes peuvent aussi être supprimées depuis leur menu.',
+      listsActions: 'Actions possibles : créer, renommer, supprimer. La suppression d\'une liste supprime aussi toutes ses cartes.',
+
+      cardsTitle: '🃏 Les Cartes',
+      cardsWhat: 'Une carte représente une tâche individuelle. C\'est l\'élément central d\'EpiTrello. Cliquez sur une carte pour ouvrir son panneau de détails complet.',
+      cardsCreate: 'Cliquez sur « + Ajouter une carte » en bas de n\'importe quelle liste. Entrez un titre pour créer la carte.',
+      cardsEdit: 'Cliquez sur une carte pour ouvrir le modal de détails où vous pouvez tout modifier.',
+      cardsActions: 'Actions possibles : créer, renommer, supprimer, déplacer entre les listes (drag & drop).',
+
+      cardFeaturesTitle: '✨ Fonctionnalités des cartes',
+      cardFeaturesIntro: 'Chaque carte dispose de nombreuses fonctionnalités accessibles depuis le panneau de détails :',
+
+      descriptionTitle: '📄 Description',
+      descriptionDesc: 'Ajoutez une description détaillée à votre carte. Double-cliquez sur la zone de description pour la modifier. Validez avec le bouton « Enregistrer » ou annulez les modifications.',
+
+      coverTitle: '🎨 Couleur de couverture',
+      coverDesc: 'Appliquez une couleur de couverture à votre carte pour la catégoriser visuellement. Choisissez parmi 8 couleurs (rouge, orange, jaune, vert, bleu, violet, rose, gris) ou retirez la couleur.',
+
+      imagesTitle: '🖼️ Images',
+      imagesDesc: 'Ajoutez plusieurs images à votre carte. La première image ajoutée devient la couverture de la carte. Cliquez sur une image pour l\'agrandir dans une lightbox avec navigation carousel. Vous pouvez supprimer les images individuellement.',
+
+      datesTitle: '📅 Dates',
+      datesDesc: 'Définissez une date de début et/ou une date de fin pour votre carte. Un badge coloré apparaît sur la carte : vert (à temps), orange (bientôt), rouge (en retard). Vous pouvez aussi ajouter les dates à Google Calendar.',
+
+      assignmentsTitle: '👥 Assignation de membres',
+      assignmentsDesc: 'Assignez des membres du board à une carte pour indiquer qui est responsable. Les avatars des membres assignés apparaissent directement sur la carte. Vous pouvez assigner ou retirer des membres via le panneau latéral.',
+
+      completionTitle: '✅ Marquage terminé',
+      completionDesc: 'Marquez une carte comme terminée en cliquant sur la case à cocher. La carte apparaîtra avec un style barré pour indiquer qu\'elle est complétée.',
+
+      commentsTitle: '💬 Commentaires',
+      commentsDesc: 'Ajoutez des commentaires pour discuter, donner du feedback ou partager des informations. Vous pouvez modifier et supprimer vos propres commentaires. Un compteur de commentaires apparaît sur la carte.',
+
+      activityTitle: '📊 Historique d\'activité',
+      activityDesc: 'Chaque action effectuée sur une carte est enregistrée (création, modification, déplacement, etc.). Consultez l\'historique complet dans l\'onglet « Activité » du panneau de commentaires.',
+
+      githubTitle: '🔗 GitHub Power-Up',
+      githubDesc: 'Connectez votre compte GitHub pour lier des issues et pull requests à vos cartes. Créez des issues directement depuis EpiTrello ou liez des issues existantes. Vous pouvez voir le statut des issues et les ouvrir/fermer directement.',
+
+      sharingTitle: '🤝 Collaboration & Partage',
+      sharingWhat: 'EpiTrello permet la collaboration en temps réel. Invitez des membres sur vos boards pour travailler ensemble.',
+      sharingInvite: 'Pour inviter quelqu\'un : ouvrez le menu de gestion du board, entrez l\'ID utilisateur de la personne (trouvable dans ses Paramètres), et envoyez l\'invitation. Le destinataire verra l\'invitation sur sa page d\'accueil.',
+      sharingRoles: 'Le propriétaire du board peut gérer les membres (inviter/retirer). Les membres peuvent créer, modifier et supprimer des listes et des cartes.',
+
+      settingsTitle: '⚙️ Paramètres',
+      settingsDesc: 'Accédez aux paramètres via le menu profil en haut à droite. Vous pouvez modifier votre nom d\'utilisateur, photo de profil, thème de l\'application et langue.',
+      settingsTheme: 'Choisissez parmi 8 thèmes visuels pour personnaliser votre interface.',
+      settingsLanguage: 'Basculez entre le français et l\'anglais à tout moment.',
+
+      tipsTitle: '💡 Astuces',
+      tip1: 'Glissez-déposez les cartes entre les listes pour les réorganiser.',
+      tip2: 'Utilisez les couleurs de couverture pour catégoriser visuellement vos tâches.',
+      tip3: 'Partagez votre ID utilisateur avec vos collaborateurs pour qu\'ils puissent vous inviter sur leurs boards.',
+      tip4: 'Consultez l\'historique d\'activité pour suivre toutes les modifications apportées à une carte.',
+      tip5: 'Connectez GitHub pour synchroniser vos issues avec vos cartes de projet.',
+    },
   },
 
   en: {
@@ -679,6 +759,86 @@ export const translations = {
       selectIssuePlaceholder: '-- Select an issue --',
       issueTitlePlaceholder: 'Enter issue title...',
       issueDescriptionPlaceholder: 'Enter issue description...',
+    },
+
+    // User Guide
+    guide: {
+      tooltip: 'User guide',
+      title: 'EpiTrello User Guide',
+      subtitle: 'Everything you need to know to master EpiTrello',
+      backToBoards: '← Back to boards',
+      tableOfContents: 'Table of Contents',
+      languageToggle: 'Français',
+
+      // Sections
+      gettingStartedTitle: '🚀 Getting Started',
+      gettingStartedDesc: 'EpiTrello is a visual project management tool inspired by Trello. It allows you to organize your tasks and projects using boards, lists, and cards. Here\'s how to get started.',
+
+      boardsTitle: '📋 Boards',
+      boardsWhat: 'A board represents a project or workspace. It\'s the main container that groups all your lists and cards together.',
+      boardsCreate: 'Click the "Create a board" button in the top right of the home page. Give it a title and an optional description.',
+      boardsEdit: 'To edit or delete a board, hover over its card and an options menu will appear.',
+      boardsShare: 'You can invite other users to collaborate on a board by sharing your user ID (found in Settings) or using the board management menu.',
+      boardsActions: 'Available actions: create, rename, delete, invite members, leave a shared board.',
+
+      listsTitle: '📝 Lists',
+      listsWhat: 'A list is a column in your board. It represents a step, category, or status (e.g., "To Do", "In Progress", "Done").',
+      listsCreate: 'Click "+ Add another list" to the right of your existing lists. Enter a title and confirm.',
+      listsEdit: 'Click on a list\'s title to edit it directly. Lists can also be deleted from their menu.',
+      listsActions: 'Available actions: create, rename, delete. Deleting a list also deletes all its cards.',
+
+      cardsTitle: '🃏 Cards',
+      cardsWhat: 'A card represents an individual task. It\'s the core element of EpiTrello. Click on a card to open its full detail panel.',
+      cardsCreate: 'Click "+ Add a card" at the bottom of any list. Enter a title to create the card.',
+      cardsEdit: 'Click on a card to open the detail modal where you can edit everything.',
+      cardsActions: 'Available actions: create, rename, delete, move between lists (drag & drop).',
+
+      cardFeaturesTitle: '✨ Card Features',
+      cardFeaturesIntro: 'Each card has many features accessible from the detail panel:',
+
+      descriptionTitle: '📄 Description',
+      descriptionDesc: 'Add a detailed description to your card. Double-click the description area to edit it. Save with the "Save" button or cancel changes.',
+
+      coverTitle: '🎨 Cover Color',
+      coverDesc: 'Apply a cover color to visually categorize your card. Choose from 8 colors (red, orange, yellow, green, blue, purple, pink, gray) or remove the color.',
+
+      imagesTitle: '🖼️ Images',
+      imagesDesc: 'Add multiple images to your card. The first image added becomes the card\'s cover image. Click an image to enlarge it in a lightbox with carousel navigation. You can delete images individually.',
+
+      datesTitle: '📅 Dates',
+      datesDesc: 'Set a start date and/or due date for your card. A colored badge appears on the card: green (on time), orange (soon), red (overdue). You can also add dates to Google Calendar.',
+
+      assignmentsTitle: '👥 Member Assignment',
+      assignmentsDesc: 'Assign board members to a card to indicate responsibility. Assigned members\' avatars appear directly on the card. You can assign or remove members via the sidebar panel.',
+
+      completionTitle: '✅ Completion',
+      completionDesc: 'Mark a card as complete by clicking the checkbox. The card will appear with a strikethrough style to indicate it\'s completed.',
+
+      commentsTitle: '💬 Comments',
+      commentsDesc: 'Add comments to discuss, give feedback, or share information. You can edit and delete your own comments. A comment counter appears on the card.',
+
+      activityTitle: '📊 Activity History',
+      activityDesc: 'Every action performed on a card is recorded (creation, modification, movement, etc.). View the complete history in the "Activity" tab of the comments panel.',
+
+      githubTitle: '🔗 GitHub Power-Up',
+      githubDesc: 'Connect your GitHub account to link issues and pull requests to your cards. Create issues directly from EpiTrello or link existing ones. You can view issue status and open/close them directly.',
+
+      sharingTitle: '🤝 Collaboration & Sharing',
+      sharingWhat: 'EpiTrello enables real-time collaboration. Invite members to your boards to work together.',
+      sharingInvite: 'To invite someone: open the board management menu, enter the person\'s user ID (found in their Settings), and send the invitation. The recipient will see the invitation on their home page.',
+      sharingRoles: 'The board owner can manage members (invite/remove). Members can create, edit, and delete lists and cards.',
+
+      settingsTitle: '⚙️ Settings',
+      settingsDesc: 'Access settings from the profile menu in the top right. You can change your username, profile picture, application theme, and language.',
+      settingsTheme: 'Choose from 8 visual themes to customize your interface.',
+      settingsLanguage: 'Switch between French and English at any time.',
+
+      tipsTitle: '💡 Tips & Tricks',
+      tip1: 'Drag and drop cards between lists to reorganize them.',
+      tip2: 'Use cover colors to visually categorize your tasks.',
+      tip3: 'Share your user ID with collaborators so they can invite you to their boards.',
+      tip4: 'Check the activity history to track all changes made to a card.',
+      tip5: 'Connect GitHub to sync your issues with your project cards.',
     },
   },
 }
