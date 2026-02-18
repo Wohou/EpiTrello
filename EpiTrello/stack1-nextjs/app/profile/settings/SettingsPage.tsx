@@ -73,6 +73,17 @@ export default function SettingsPage() {
 
       if (error) throw error
 
+      // Sync avatar_url and username to profiles table
+      const { data: { user } } = await supabaseBrowser.auth.getUser()
+      if (user) {
+        await supabaseBrowser
+          .from('profiles')
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - Supabase client has no DB types
+          .update({ avatar_url: avatarUrl, username: trimmedUsername })
+          .eq('id', user.id)
+      }
+
       // Update local state with trimmed username
       setUsername(trimmedUsername)
       setMessage({ type: 'success', text: t.settings.profileUpdated })
@@ -139,6 +150,14 @@ export default function SettingsPage() {
 
       if (updateError) throw updateError
 
+      // Sync to profiles table so cards/comments show the avatar
+      await supabaseBrowser
+        .from('profiles')
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore - Supabase client has no DB types
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id)
+
       setAvatarUrl(publicUrl)
       setMessage({ type: 'success', text: t.settings.photoUpdated })
     } catch (error: unknown) {
@@ -154,11 +173,22 @@ export default function SettingsPage() {
       setUploading(true)
       setMessage(null)
 
+      const { data: { user } } = await supabaseBrowser.auth.getUser()
       const { error } = await supabaseBrowser.auth.updateUser({
         data: { avatar_url: null }
       })
 
       if (error) throw error
+
+      // Sync to profiles table
+      if (user) {
+        await supabaseBrowser
+          .from('profiles')
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - Supabase client has no DB types
+          .update({ avatar_url: null })
+          .eq('id', user.id)
+      }
 
       setAvatarUrl(null)
       setMessage({ type: 'success', text: t.settings.photoRemoved })

@@ -230,6 +230,8 @@
 .cdm-avatar-img {
   border-radius: 50%;
   object-fit: cover;
+  width: 100%;
+  height: 100%;
 }
 .cdm-avatar-initials {
   font-size: 11px;
@@ -979,6 +981,8 @@
 .cdm-feed-avatar .cdm-avatar-img {
   border-radius: 50%;
   object-fit: cover;
+  width: 100%;
+  height: 100%;
 }
 .cdm-feed-avatar .cdm-avatar-initials {
   font-size: 12px;

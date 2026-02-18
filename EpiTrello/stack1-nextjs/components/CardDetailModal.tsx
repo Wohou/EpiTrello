@@ -287,6 +287,14 @@ export default function CardDetailModal({
   }
 
   const handleDeleteImage = async (imageId: string) => {
+    const confirmed = await confirm({
+      title: t.cards.removeImage,
+      message: t.cards.deleteConfirm || 'Are you sure?',
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
+      variant: 'danger',
+    })
+    if (!confirmed) return
     try {
       const response = await fetch(`/api/cards/${card.id}/images`, {
         method: 'DELETE',
