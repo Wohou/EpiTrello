@@ -108,6 +108,17 @@ export interface Profile {
   updated_at: string
 }
 
+export interface CardAssignment {
+  id: string
+  card_id: string
+  user_id: string
+  assigned_at: string
+  assigned_by: string | null
+  // Extended fields
+  username?: string
+  avatar_url?: string
+}
+
 export interface CardGitHubLink {
   id: string
   card_id: string
@@ -121,6 +132,39 @@ export interface CardGitHubLink {
   synced_at: string
   created_by: string
   created_at: string
+}
+
+export interface CardImage {
+  id: string
+  card_id: string
+  url: string
+  position: number
+  uploaded_by: string | null
+  created_at: string
+}
+
+export interface CardComment {
+  id: string
+  card_id: string
+  user_id: string
+  content: string
+  created_at: string
+  updated_at: string
+  // Extended fields
+  username?: string
+  avatar_url?: string | null
+}
+
+export interface CardActivity {
+  id: string
+  card_id: string
+  user_id: string
+  action_type: string
+  action_data: Record<string, unknown>
+  created_at: string
+  // Extended fields
+  username?: string
+  avatar_url?: string | null
 }
 
 export interface GitHubRepo {

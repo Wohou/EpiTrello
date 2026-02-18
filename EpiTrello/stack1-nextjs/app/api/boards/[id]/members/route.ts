@@ -68,6 +68,28 @@ export async function GET(
       })
     )
 
+    // Include the board owner if not already in the members list
+    if (board) {
+      const ownerInMembers = enrichedMembers.some(m => m.user_id === board.owner_id)
+      if (!ownerInMembers) {
+        const { data: ownerProfile } = await supabase
+          .from('profiles')
+          .select('username, avatar_url')
+          .eq('id', board.owner_id)
+          .single()
+
+        enrichedMembers.unshift({
+          id: 'owner-' + board.owner_id,
+          board_id: boardId,
+          user_id: board.owner_id,
+          role: 'owner',
+          joined_at: new Date().toISOString(),
+          username: ownerProfile?.username || 'Owner',
+          avatar_url: ownerProfile?.avatar_url || null,
+        })
+      }
+    }
+
     return NextResponse.json(enrichedMembers)
   } catch (error) {
     console.error('Error fetching board members:', error)

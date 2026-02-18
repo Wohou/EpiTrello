@@ -5,7 +5,7 @@ import { Droppable, Draggable, DraggableProvidedDragHandleProps } from '@hello-p
 import CardItem from './CardItem'
 import { useNotification } from '@/components/NotificationContext'
 import { useLanguage } from '@/lib/language-context'
-import type { ListWithCards, Card } from '@/lib/supabase'
+import type { ListWithCards, Card, BoardMember } from '@/lib/supabase'
 import './ListColumn.css'
 
 interface ListColumnProps {
@@ -17,6 +17,8 @@ interface ListColumnProps {
   onDeleteCard: (cardId: string) => void
   onUpdateCard: (cardId: string, updates: Partial<Card>) => void
   isSharedBoard?: boolean
+  boardId?: string
+  boardMembers?: BoardMember[]
 }
 
 export default function ListColumn({
@@ -28,6 +30,8 @@ export default function ListColumn({
   onDeleteCard,
   onUpdateCard,
   isSharedBoard = false,
+  boardId,
+  boardMembers = [],
 }: ListColumnProps) {
   const [isAddingCard, setIsAddingCard] = useState(false)
   const [newCardTitle, setNewCardTitle] = useState('')
@@ -123,6 +127,8 @@ export default function ListColumn({
                       onDelete={() => onDeleteCard(card.id)}
                       onUpdate={(updates) => onUpdateCard(card.id, updates)}
                       isSharedBoard={isSharedBoard}
+                      boardId={boardId}
+                      boardMembers={boardMembers}
                     />
                   </div>
                 )}

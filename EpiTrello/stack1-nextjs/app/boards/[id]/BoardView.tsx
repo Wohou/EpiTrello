@@ -724,6 +724,8 @@ export default function BoardView({ boardId }: BoardViewProps) {
                         onDeleteCard={(cardId) => handleDeleteCard(list.id, cardId)}
                         onUpdateCard={handleUpdateCard}
                         isSharedBoard={isSharedBoard}
+                        boardId={boardId}
+                        boardMembers={members}
                       />
                     </div>
                   )}

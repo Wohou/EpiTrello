@@ -29,6 +29,7 @@
   max-height: 160px;
   overflow: hidden;
   border-radius: 3px 3px 0 0;
+  position: relative;
 }
 
 .card-cover-image img {
@@ -36,6 +37,19 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.card-images-count {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 8px;
+  pointer-events: none;
 }
 
 .card-content {
@@ -583,6 +597,19 @@
   flex-shrink: 0;
 }
 
+.comment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  background-color: #f0f4ff;
+  color: #0079bf;
+  border: 1px solid #d6e4f0;
+}
+
 /* ==================== */
 /* Date Picker Modal */
 /* ==================== */
@@ -831,4 +858,250 @@
 
 .google-calendar-icon {
   flex-shrink: 0;
+}
+
+/* ===== Card Assignees (on card) ===== */
+.card-assignees {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.card-assignee-avatar {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0079bf 0%, #026aa7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 2px solid white;
+  margin-left: -6px;
+  cursor: default;
+  transition: transform 0.15s;
+}
+
+.card-assignee-avatar:first-child {
+  margin-left: 0;
+}
+
+.card-assignee-avatar:hover {
+  transform: scale(1.1);
+  z-index: 1;
+}
+
+.assignee-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.assignee-initials {
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  line-height: 1;
+}
+
+.card-assignee-more {
+  background: #b3bac5;
+}
+
+/* ===== Assignment Modal ===== */
+.assign-modal {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.assign-modal h3 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  color: #172b4d;
+}
+
+.assign-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.assign-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #5e6c84;
+  margin-bottom: 8px;
+}
+
+.assign-members-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.assign-member-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  text-align: left;
+}
+
+.assign-member-row:hover {
+  background-color: rgba(9, 30, 66, 0.04);
+}
+
+.assign-member-row.assigned {
+  background-color: rgba(0, 121, 191, 0.06);
+}
+
+.assign-member-row.assigned:hover {
+  background-color: rgba(0, 121, 191, 0.1);
+}
+
+.assign-member-row.toggling {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.assign-member-avatar {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0079bf 0%, #026aa7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.assign-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.assign-avatar-initials {
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+}
+
+.assign-member-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.assign-member-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #172b4d;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assign-member-role {
+  font-size: 11px;
+  color: #5e6c84;
+}
+
+.assign-checkbox {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border: 2px solid #dfe1e6;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.assign-checkbox.checked {
+  background-color: #0079bf;
+  border-color: #0079bf;
+}
+
+.assign-check-icon {
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.assign-empty {
+  text-align: center;
+  color: #5e6c84;
+  font-size: 14px;
+  padding: 20px;
+}
+
+/* Assigned members summary in modal */
+.assign-current-section {
+  border-top: 1px solid #e4e6ea;
+  padding-top: 16px;
+}
+
+.assign-current-avatars {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assign-current-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 4px;
+  background: rgba(0, 121, 191, 0.08);
+  border-radius: 20px;
+  font-size: 12px;
+  color: #172b4d;
+}
+
+.assign-chip-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.assign-chip-initials {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0079bf 0%, #026aa7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+}
+
+.assign-chip-name {
+  font-weight: 500;
 }

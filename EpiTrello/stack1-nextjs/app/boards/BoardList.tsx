@@ -30,9 +30,18 @@ export default function BoardList() {
     const { data: { user } } = await supabaseBrowser.auth.getUser()
     if (user) {
       const displayName = (user.user_metadata?.username || user.email || 'User').trim()
+      const avatar = user.user_metadata?.avatar_url || null
       setUsername(displayName)
       setUserEmail(user.email || '')
-      setAvatarUrl(user.user_metadata?.avatar_url || null)
+      setAvatarUrl(avatar)
+
+      // Sync avatar_url and username to profiles table (so cards/comments show the avatar)
+      await supabaseBrowser
+        .from('profiles')
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore - Supabase client has no DB types
+        .update({ avatar_url: avatar, username: displayName })
+        .eq('id', user.id)
     }
   }
 
