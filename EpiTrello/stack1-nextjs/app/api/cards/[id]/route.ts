@@ -55,7 +55,19 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { title, description, position, list_id, cover_color, cover_image, is_completed, start_date, due_date } = body
+    const {
+      title,
+      description,
+      status,
+      labels,
+      position,
+      list_id,
+      cover_color,
+      cover_image,
+      is_completed,
+      start_date,
+      due_date,
+    } = body
 
     // Build update object with only provided fields
     const updateData: Record<string, unknown> = {
@@ -65,6 +77,8 @@ export async function PUT(
 
     if (title !== undefined) updateData.title = title
     if (description !== undefined) updateData.description = description
+    if (status !== undefined) updateData.status = status
+    if (labels !== undefined) updateData.labels = labels
     if (position !== undefined) updateData.position = position
     if (list_id !== undefined) updateData.list_id = list_id
     if (cover_color !== undefined) updateData.cover_color = cover_color

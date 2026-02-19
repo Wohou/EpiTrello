@@ -84,6 +84,8 @@ export interface Card {
   id: string
   title: string
   description: string | null
+  status?: string | null
+  labels?: string[]
   position: number
   list_id: string
   cover_color: string | null

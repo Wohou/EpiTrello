@@ -112,6 +112,8 @@ export default function CardDetailModal({
   const [uploading, setUploading] = useState(false)
   const [showGitHubPowerUp, setShowGitHubPowerUp] = useState(false)
   const [showAssignPanel, setShowAssignPanel] = useState(false)
+  const [tempStatus, setTempStatus] = useState(card.status || '')
+  const [labelInput, setLabelInput] = useState('')
   const [showImageModal, setShowImageModal] = useState(false)
   const [carouselIndex, setCarouselIndex] = useState(0)
 
@@ -135,6 +137,7 @@ export default function CardDetailModal({
   useEffect(() => {
     setTempTitle(card.title)
     setTempDescription(card.description || '')
+    setTempStatus(card.status || '')
     setTempStartDate(card.start_date ? new Date(card.start_date).toISOString().split('T')[0] : '')
     setTempDueDate(card.due_date ? new Date(card.due_date).toISOString().split('T')[0] : '')
     setUseStartDate(!!card.start_date)
@@ -252,6 +255,44 @@ export default function CardDetailModal({
     onUpdate({ cover_color: color })
     logActivity('cover_changed', { color })
     setShowColorPicker(false)
+  }
+
+  const handleSaveStatus = () => {
+    const normalizedStatus = tempStatus.trim()
+    const currentStatus = card.status || ''
+
+    if (normalizedStatus === currentStatus) return
+
+    onUpdate({ status: normalizedStatus || null })
+    logActivity('status_changed', { status: normalizedStatus || null })
+  }
+
+  const handleAddLabel = async () => {
+    const nextLabel = labelInput.trim()
+    if (!nextLabel) return
+
+    const currentLabels = card.labels || []
+    const alreadyExists = currentLabels.some((label) => label.toLowerCase() === nextLabel.toLowerCase())
+
+    if (alreadyExists) {
+      await alert({
+        message: t.cards.labelAlreadyExists || 'This label already exists',
+        variant: 'error',
+      })
+      return
+    }
+
+    const updatedLabels = [...currentLabels, nextLabel]
+    onUpdate({ labels: updatedLabels })
+    logActivity('labels_changed', { labels: updatedLabels })
+    setLabelInput('')
+  }
+
+  const handleRemoveLabel = (labelToRemove: string) => {
+    const currentLabels = card.labels || []
+    const updatedLabels = currentLabels.filter((label) => label !== labelToRemove)
+    onUpdate({ labels: updatedLabels })
+    logActivity('labels_changed', { labels: updatedLabels })
   }
 
   const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -376,6 +417,8 @@ export default function CardDetailModal({
       due_date_changed: t.cards.activityDueDateChanged,
       completed: t.cards.activityCompleted,
       uncompleted: t.cards.activityUncompleted,
+      status_changed: t.cards.activityStatusChanged,
+      labels_changed: t.cards.activityLabelsChanged,
       assigned: t.cards.activityAssigned,
       unassigned: t.cards.activityUnassigned,
       image_added: t.cards.activityImageAdded,
@@ -602,6 +645,35 @@ export default function CardDetailModal({
                 </div>
               </div>
             )}
+
+            <div className="cdm-meta-section">
+              <div className="cdm-section-header">
+                <span className="cdm-section-icon">🏷️</span>
+                <span className="cdm-section-label">{t.cards.statusAndLabels}</span>
+              </div>
+              <div className="cdm-meta-content">
+                <div className="cdm-meta-row">
+                  <span className="cdm-meta-title">{t.cards.status}</span>
+                  {card.status ? (
+                    <span className="cdm-status-chip">{card.status}</span>
+                  ) : (
+                    <span className="cdm-meta-empty">{t.cards.noStatus}</span>
+                  )}
+                </div>
+                <div className="cdm-meta-row">
+                  <span className="cdm-meta-title">{t.cards.labels}</span>
+                  {(card.labels || []).length > 0 ? (
+                    <div className="cdm-labels-list">
+                      {(card.labels || []).map((label) => (
+                        <span key={label} className="cdm-label-chip">{label}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="cdm-meta-empty">{t.cards.noLabels}</span>
+                  )}
+                </div>
+              </div>
+            </div>
 
             {/* Description */}
             <div className="cdm-description-section">
@@ -948,6 +1020,56 @@ export default function CardDetailModal({
                       </button>
                     )
                   })}
+                </div>
+              )}
+            </div>
+
+            <div className="cdm-sidebar-section">
+              <div className="cdm-sidebar-section-title">🏷️ {t.cards.statusAndLabels}</div>
+              <input
+                type="text"
+                className="cdm-sidebar-input"
+                value={tempStatus}
+                onChange={(e) => setTempStatus(e.target.value)}
+                placeholder={t.cards.statusPlaceholder}
+                onBlur={handleSaveStatus}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleSaveStatus()
+                  }
+                }}
+              />
+              <div className="cdm-label-create-row">
+                <input
+                  type="text"
+                  className="cdm-sidebar-input"
+                  value={labelInput}
+                  onChange={(e) => setLabelInput(e.target.value)}
+                  placeholder={t.cards.labelPlaceholder}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      void handleAddLabel()
+                    }
+                  }}
+                />
+                <button className="cdm-sidebar-btn" onClick={() => void handleAddLabel()}>
+                  + {t.cards.addLabel}
+                </button>
+              </div>
+              {(card.labels || []).length > 0 && (
+                <div className="cdm-sidebar-labels-list">
+                  {(card.labels || []).map((label) => (
+                    <button
+                      key={label}
+                      className="cdm-sidebar-label-chip"
+                      onClick={() => handleRemoveLabel(label)}
+                      title={t.cards.removeLabel}
+                    >
+                      {label} <span>✕</span>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
