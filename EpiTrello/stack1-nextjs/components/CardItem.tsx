@@ -25,6 +25,7 @@ interface CardItemProps {
   isSharedBoard?: boolean
   boardId?: string
   boardMembers?: BoardMember[]
+  onRefreshBoard?: () => Promise<void>
 }
 
 const CARD_COLORS = [
@@ -91,7 +92,7 @@ const generateGoogleCalendarUrl = (
   return `https://calendar.google.com/calendar/render?${params.toString()}`
 }
 
-export default function CardItem({ card, onDelete, onUpdate, boardMembers = [] }: CardItemProps) {
+export default function CardItem({ card, onDelete, onUpdate, boardId, boardMembers = [], onRefreshBoard }: CardItemProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [title, setTitle] = useState(card.title)
   const [description, setDescription] = useState(card.description || '')
@@ -933,6 +934,8 @@ export default function CardItem({ card, onDelete, onUpdate, boardMembers = [] }
           cardImages={cardImages}
           onImagesChange={setCardImages}
           onCommentCountChange={setCommentCount}
+          boardId={boardId}
+          onRefreshBoard={onRefreshBoard}
         />
       )}
 

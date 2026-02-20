@@ -19,6 +19,7 @@ interface ListColumnProps {
   isSharedBoard?: boolean
   boardId?: string
   boardMembers?: BoardMember[]
+  onRefreshBoard?: () => Promise<void>
 }
 
 export default function ListColumn({
@@ -32,6 +33,7 @@ export default function ListColumn({
   isSharedBoard = false,
   boardId,
   boardMembers = [],
+  onRefreshBoard,
 }: ListColumnProps) {
   const [isAddingCard, setIsAddingCard] = useState(false)
   const [newCardTitle, setNewCardTitle] = useState('')
@@ -129,6 +131,7 @@ export default function ListColumn({
                       isSharedBoard={isSharedBoard}
                       boardId={boardId}
                       boardMembers={boardMembers}
+                      onRefreshBoard={onRefreshBoard}
                     />
                   </div>
                 )}

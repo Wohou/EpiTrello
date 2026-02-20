@@ -201,6 +201,24 @@ export interface GitHubIssue {
   }>
 }
 
+export interface BoardStatus {
+  id: string
+  board_id: string
+  name: string
+  color: string
+  created_by: string | null
+  created_at: string
+}
+
+export interface BoardLabel {
+  id: string
+  board_id: string
+  name: string
+  color: string
+  created_by: string | null
+  created_at: string
+}
+
 // Extended types with relations
 export interface BoardWithLists extends Board {
   lists: ListWithCards[]

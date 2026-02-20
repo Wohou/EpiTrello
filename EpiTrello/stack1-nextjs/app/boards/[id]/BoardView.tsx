@@ -726,6 +726,7 @@ export default function BoardView({ boardId }: BoardViewProps) {
                         isSharedBoard={isSharedBoard}
                         boardId={boardId}
                         boardMembers={members}
+                        onRefreshBoard={fetchBoard}
                       />
                     </div>
                   )}
