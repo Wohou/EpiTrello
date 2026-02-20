@@ -354,7 +354,7 @@ export const translations = {
       gettingStartedTitle: '🚀 Démarrage rapide',
       gettingStartedDesc: 'EpiTrello est un outil de gestion de projet visuel inspiré de Trello. Il vous permet d\'organiser vos tâches et projets à l\'aide de boards, de listes et de cartes. Voici comment commencer.',
 
-      boardsTitle: '📋 Les Boards',
+      boardsTitle: '📋 Les Tableaux (boards)',
       boardsWhat: 'Un board (tableau) représente un projet ou un espace de travail. C\'est le conteneur principal qui regroupe toutes vos listes et cartes.',
       boardsCreate: 'Cliquez sur le bouton « Créer un board » en haut à droite de la page d\'accueil. Donnez-lui un titre et une description optionnelle.',
       boardsEdit: 'Pour modifier ou supprimer un board, survolez sa carte et un menu d\'options apparaîtra.',
@@ -365,13 +365,13 @@ export const translations = {
       listsWhat: 'Une liste est une colonne dans votre board. Elle représente une étape, une catégorie ou un état (ex : « À faire », « En cours », « Terminé »).',
       listsCreate: 'Cliquez sur « + Ajouter une autre liste » à droite de vos listes existantes. Entrez un titre et validez.',
       listsEdit: 'Cliquez sur le titre d\'une liste pour le modifier directement. Les listes peuvent aussi être supprimées depuis leur menu.',
-      listsActions: 'Actions possibles : créer, renommer, supprimer. La suppression d\'une liste supprime aussi toutes ses cartes.',
+      listsActions: 'Actions possibles : créer, renommer, supprimer (la suppression d\'une liste supprime aussi toutes ses cartes), déplacer (drag & drop).',
 
       cardsTitle: '🃏 Les Cartes',
       cardsWhat: 'Une carte représente une tâche individuelle. C\'est l\'élément central d\'EpiTrello. Cliquez sur une carte pour ouvrir son panneau de détails complet.',
       cardsCreate: 'Cliquez sur « + Ajouter une carte » en bas de n\'importe quelle liste. Entrez un titre pour créer la carte.',
       cardsEdit: 'Cliquez sur une carte pour ouvrir le modal de détails où vous pouvez tout modifier.',
-      cardsActions: 'Actions possibles : créer, renommer, supprimer, déplacer entre les listes (drag & drop).',
+      cardsActions: 'Actions possibles : créer, renommer, supprimer, déplacer entre les listes (drag & drop), ajouter des images, ajouter des commentaires, changer la couverture, ajouter des labels personnalisés, lier avec GitHub, assigner des membres, définir une date de début et une date de fin, ajouter une description.',
 
       cardFeaturesTitle: '✨ Fonctionnalités des cartes',
       cardFeaturesIntro: 'Chaque carte dispose de nombreuses fonctionnalités accessibles depuis le panneau de détails :',
@@ -785,13 +785,13 @@ export const translations = {
       listsWhat: 'A list is a column in your board. It represents a step, category, or status (e.g., "To Do", "In Progress", "Done").',
       listsCreate: 'Click "+ Add another list" to the right of your existing lists. Enter a title and confirm.',
       listsEdit: 'Click on a list\'s title to edit it directly. Lists can also be deleted from their menu.',
-      listsActions: 'Available actions: create, rename, delete. Deleting a list also deletes all its cards.',
+      listsActions: 'Available actions: create, rename, delete (deleting a list also deletes all its cards), move (drag & drop).',
 
       cardsTitle: '🃏 Cards',
       cardsWhat: 'A card represents an individual task. It\'s the core element of EpiTrello. Click on a card to open its full detail panel.',
       cardsCreate: 'Click "+ Add a card" at the bottom of any list. Enter a title to create the card.',
       cardsEdit: 'Click on a card to open the detail modal where you can edit everything.',
-      cardsActions: 'Available actions: create, rename, delete, move between lists (drag & drop).',
+      cardsActions: 'Available actions: create, rename, delete, move between lists (drag & drop), add images, add comments, change cover, add custom labels, link with GitHub, assign members, set start and due dates, add a description.',
 
       cardFeaturesTitle: '✨ Card Features',
       cardFeaturesIntro: 'Each card has many features accessible from the detail panel:',

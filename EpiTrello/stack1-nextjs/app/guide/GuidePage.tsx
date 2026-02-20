@@ -68,6 +68,17 @@ export default function GuidePage() {
     }
   }
 
+  const getActionTags = (actionsText: string) => {
+    const withoutPrefix = actionsText
+      .replace('Actions possibles : ', '')
+      .replace('Available actions: ', '')
+
+    return withoutPrefix
+      .replace(/\.$/, '')
+      .split(', ')
+      .filter(Boolean)
+  }
+
   return (
     <div className="guide-page">
       {/* Header */}
@@ -144,7 +155,7 @@ export default function GuidePage() {
                 <p>{t.boardsWhat}</p>
                 <div className="guide-demo-box guide-demo-board">
                   <div className="guide-demo-board-header">
-                    <span className="guide-demo-board-title">Mon Projet</span>
+                    <span className="guide-demo-board-title">{guideLang === 'fr' ? 'Mon Projet' : 'My Project'}</span>
                     <span className="guide-demo-board-badge">3 {guideLang === 'fr' ? 'listes' : 'lists'}</span>
                   </div>
                   <div className="guide-demo-board-lists">
@@ -194,8 +205,8 @@ export default function GuidePage() {
               <div className="guide-actions-summary">
                 <span className="guide-actions-label">{guideLang === 'fr' ? 'Actions :' : 'Actions:'}</span>
                 <div className="guide-action-tags">
-                  {t.boardsActions.split(', ').map((action, i) => (
-                    <span key={i} className="guide-action-tag">{action.replace('Actions possibles : ', '').replace('Available actions: ', '')}</span>
+                  {getActionTags(t.boardsActions).map((action, i) => (
+                    <span key={i} className="guide-action-tag">{action}</span>
                   ))}
                 </div>
               </div>
@@ -248,8 +259,13 @@ export default function GuidePage() {
                 </div>
               </div>
 
-              <div className="guide-warning">
-                ⚠️ {t.listsActions}
+              <div className="guide-actions-summary">
+                <span className="guide-actions-label">{guideLang === 'fr' ? 'Actions :' : 'Actions:'}</span>
+                <div className="guide-action-tags">
+                  {getActionTags(t.listsActions).map((action, i) => (
+                    <span key={i} className="guide-action-tag">{action}</span>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
@@ -300,8 +316,17 @@ export default function GuidePage() {
                   <div className="guide-step-number">3</div>
                   <div className="guide-step-content">
                     <h4>{guideLang === 'fr' ? 'Déplacer' : 'Move'}</h4>
-                    <p>{t.cardsActions}</p>
+                    <p>{guideLang === 'fr' ? 'Déplacez les cartes entre les listes avec le glisser-déposer.' : 'Move cards between lists using drag and drop.'}</p>
                   </div>
+                </div>
+              </div>
+
+              <div className="guide-actions-summary">
+                <span className="guide-actions-label">{guideLang === 'fr' ? 'Actions :' : 'Actions:'}</span>
+                <div className="guide-action-tags">
+                  {getActionTags(t.cardsActions).map((action, i) => (
+                    <span key={i} className="guide-action-tag">{action}</span>
+                  ))}
                 </div>
               </div>
             </div>
