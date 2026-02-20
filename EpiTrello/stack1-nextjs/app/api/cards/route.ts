@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, list_id, description, position = 0 } = body
+    const { title, list_id, description, status = null, labels = [], position = 0 } = body
 
     if (!title || !list_id) {
       return NextResponse.json(
@@ -74,6 +74,8 @@ export async function POST(request: NextRequest) {
       .insert([{
         title,
         description,
+        status,
+        labels,
         list_id,
         position,
         created_by: user.id,

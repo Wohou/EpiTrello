@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, ChangeEvent } from 'react'
 import Image from 'next/image'
 import { useLanguage } from '@/lib/language-context'
 import { useNotification } from '@/components/NotificationContext'
-import type { Card, BoardMember, CardAssignment, CardImage, CardComment, CardActivity } from '@/lib/supabase'
+import type { Card, BoardMember, CardAssignment, CardImage, CardComment, CardActivity, BoardStatus, BoardLabel } from '@/lib/supabase'
 import GitHubPowerUp from './GitHubPowerUp'
 import './CardDetailModal.css'
 
@@ -20,6 +20,8 @@ interface CardDetailModalProps {
   cardImages: CardImage[]
   onImagesChange: (images: CardImage[]) => void
   onCommentCountChange?: (count: number) => void
+  boardId?: string
+  onRefreshBoard?: () => Promise<void>
 }
 
 const CARD_COLORS = [
@@ -94,6 +96,8 @@ export default function CardDetailModal({
   cardImages,
   onImagesChange,
   onCommentCountChange,
+  boardId,
+  onRefreshBoard,
 }: CardDetailModalProps) {
   // --- State ---
   const [editingTitle, setEditingTitle] = useState(false)
@@ -112,7 +116,18 @@ export default function CardDetailModal({
   const [uploading, setUploading] = useState(false)
   const [showGitHubPowerUp, setShowGitHubPowerUp] = useState(false)
   const [showAssignPanel, setShowAssignPanel] = useState(false)
+  const [, setTempStatus] = useState(card.status || '')
   const [showImageModal, setShowImageModal] = useState(false)
+
+  // Board-level statuses & labels
+  const [boardStatuses, setBoardStatuses] = useState<BoardStatus[]>([])
+  const [boardLabels, setBoardLabels] = useState<BoardLabel[]>([])
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false)
+  const [showLabelDropdown, setShowLabelDropdown] = useState(false)
+  const [newStatusInput, setNewStatusInput] = useState('')
+  const [newLabelInput, setNewLabelInput] = useState('')
+  const [creatingStatus, setCreatingStatus] = useState(false)
+  const [creatingLabel, setCreatingLabel] = useState(false)
   const [carouselIndex, setCarouselIndex] = useState(0)
 
   // Commentary & Activity state
@@ -135,6 +150,7 @@ export default function CardDetailModal({
   useEffect(() => {
     setTempTitle(card.title)
     setTempDescription(card.description || '')
+    setTempStatus(card.status || '')
     setTempStartDate(card.start_date ? new Date(card.start_date).toISOString().split('T')[0] : '')
     setTempDueDate(card.due_date ? new Date(card.due_date).toISOString().split('T')[0] : '')
     setUseStartDate(!!card.start_date)
@@ -191,6 +207,30 @@ export default function CardDetailModal({
     }
     fetchFeed()
   }, [card.id])
+
+  // Fetch board-level statuses & labels
+  useEffect(() => {
+    if (!boardId) return
+    const fetchBoardMeta = async () => {
+      try {
+        const [statusRes, labelRes] = await Promise.all([
+          fetch(`/api/boards/${boardId}/statuses`),
+          fetch(`/api/boards/${boardId}/labels`),
+        ])
+        if (statusRes.ok) {
+          const data = await statusRes.json()
+          setBoardStatuses(data.statuses || [])
+        }
+        if (labelRes.ok) {
+          const data = await labelRes.json()
+          setBoardLabels(data.labels || [])
+        }
+      } catch (error) {
+        console.error('Error fetching board statuses/labels:', error)
+      }
+    }
+    fetchBoardMeta()
+  }, [boardId])
 
   // --- Handlers ---
   const handleSaveTitle = () => {
@@ -252,6 +292,171 @@ export default function CardDetailModal({
     onUpdate({ cover_color: color })
     logActivity('cover_changed', { color })
     setShowColorPicker(false)
+  }
+
+  const handleRemoveLabel = (labelToRemove: string) => {
+    const currentLabels = card.labels || []
+    const updatedLabels = currentLabels.filter((label) => label !== labelToRemove)
+    onUpdate({ labels: updatedLabels })
+    logActivity('labels_changed', { labels: updatedLabels })
+  }
+
+  // --- Board-level status/label dropdown handlers ---
+  const handleSelectStatus = (statusName: string) => {
+    const current = card.status || ''
+    if (statusName === current) {
+      // Deselect
+      onUpdate({ status: null })
+      logActivity('status_changed', { status: null })
+      setTempStatus('')
+    } else {
+      onUpdate({ status: statusName })
+      logActivity('status_changed', { status: statusName })
+      setTempStatus(statusName)
+    }
+    setShowStatusDropdown(false)
+  }
+
+  const handleCreateBoardStatus = async () => {
+    const name = newStatusInput.trim()
+    if (!name || !boardId || creatingStatus) return
+    setCreatingStatus(true)
+    try {
+      const res = await fetch(`/api/boards/${boardId}/statuses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      if (res.status === 409) {
+        await alert({ message: t.cards.statusAlreadyExists || 'This status already exists', variant: 'error' })
+        return
+      }
+      if (!res.ok) throw new Error('Failed to create status')
+      const { status: newStatus } = await res.json()
+      setBoardStatuses((prev) => [...prev, newStatus])
+      setNewStatusInput('')
+      // Auto-select the new status
+      handleSelectStatus(newStatus.name)
+    } catch (error) {
+      console.error('Error creating board status:', error)
+    } finally {
+      setCreatingStatus(false)
+    }
+  }
+
+  const handleDeleteBoardStatus = async (statusId: string, statusName: string) => {
+    if (!boardId) return
+    const confirmed = await confirm({
+      title: t.common.delete,
+      message: t.cards.deleteStatusConfirm || 'Delete this status for the entire board?',
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
+      variant: 'danger',
+    })
+    if (!confirmed) return
+    try {
+      const res = await fetch(`/api/boards/${boardId}/statuses`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statusId }),
+      })
+      if (!res.ok) throw new Error('Failed to delete status')
+      setBoardStatuses((prev) => prev.filter((s) => s.id !== statusId))
+      // Clear local temp status if it was the deleted one
+      if (card.status === statusName) {
+        setTempStatus('')
+      }
+      // Refresh the entire board — the backend cascade already cleared this
+      // status from all cards in the DB, so a full refresh picks up everything
+      if (onRefreshBoard) {
+        await onRefreshBoard()
+      } else if (card.status === statusName) {
+        // Fallback: at least update current card if no refresh available
+        onUpdate({ status: null })
+      }
+    } catch (error) {
+      console.error('Error deleting board status:', error)
+    }
+  }
+
+  const handleSelectLabel = (labelName: string) => {
+    const currentLabels = card.labels || []
+    const exists = currentLabels.includes(labelName)
+    let updatedLabels: string[]
+    if (exists) {
+      updatedLabels = currentLabels.filter((l) => l !== labelName)
+    } else {
+      updatedLabels = [...currentLabels, labelName]
+    }
+    onUpdate({ labels: updatedLabels })
+    logActivity('labels_changed', { labels: updatedLabels })
+  }
+
+  const handleCreateBoardLabel = async () => {
+    const name = newLabelInput.trim()
+    if (!name || !boardId || creatingLabel) return
+    setCreatingLabel(true)
+    try {
+      const res = await fetch(`/api/boards/${boardId}/labels`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      if (res.status === 409) {
+        await alert({ message: t.cards.labelAlreadyExists || 'This label already exists', variant: 'error' })
+        return
+      }
+      if (!res.ok) throw new Error('Failed to create label')
+      const { label: newLabel } = await res.json()
+      setBoardLabels((prev) => [...prev, newLabel])
+      setNewLabelInput('')
+      // Auto-select the new label
+      const currentLabels = card.labels || []
+      if (!currentLabels.includes(newLabel.name)) {
+        const updatedLabels = [...currentLabels, newLabel.name]
+        onUpdate({ labels: updatedLabels })
+        logActivity('labels_changed', { labels: updatedLabels })
+      }
+    } catch (error) {
+      console.error('Error creating board label:', error)
+    } finally {
+      setCreatingLabel(false)
+    }
+  }
+
+  const handleDeleteBoardLabel = async (labelId: string, labelName: string) => {
+    if (!boardId) return
+    const confirmed = await confirm({
+      title: t.common.delete,
+      message: t.cards.deleteLabelConfirm || 'Delete this label for the entire board?',
+      confirmText: t.common.delete,
+      cancelText: t.common.cancel,
+      variant: 'danger',
+    })
+    if (!confirmed) return
+    try {
+      const res = await fetch(`/api/boards/${boardId}/labels`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ labelId }),
+      })
+      if (!res.ok) throw new Error('Failed to delete label')
+      setBoardLabels((prev) => prev.filter((l) => l.id !== labelId))
+      // Refresh the entire board — the backend cascade already removed this
+      // label from all cards in the DB, so a full refresh picks up everything
+      if (onRefreshBoard) {
+        await onRefreshBoard()
+      } else {
+        // Fallback: at least update current card if no refresh available
+        const currentLabels = card.labels || []
+        if (currentLabels.includes(labelName)) {
+          const updatedLabels = currentLabels.filter((l) => l !== labelName)
+          onUpdate({ labels: updatedLabels })
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting board label:', error)
+    }
   }
 
   const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -384,6 +589,8 @@ export default function CardDetailModal({
       due_date_changed: t.cards.activityDueDateChanged,
       completed: t.cards.activityCompleted,
       uncompleted: t.cards.activityUncompleted,
+      status_changed: t.cards.activityStatusChanged,
+      labels_changed: t.cards.activityLabelsChanged,
       assigned: t.cards.activityAssigned,
       unassigned: t.cards.activityUnassigned,
       image_added: t.cards.activityImageAdded,
@@ -610,6 +817,35 @@ export default function CardDetailModal({
                 </div>
               </div>
             )}
+
+            <div className="cdm-meta-section">
+              <div className="cdm-section-header">
+                <span className="cdm-section-icon">🏷️</span>
+                <span className="cdm-section-label">{t.cards.statusAndLabels}</span>
+              </div>
+              <div className="cdm-meta-content">
+                <div className="cdm-meta-row">
+                  <span className="cdm-meta-title">{t.cards.status}</span>
+                  {card.status ? (
+                    <span className="cdm-status-chip">{card.status}</span>
+                  ) : (
+                    <span className="cdm-meta-empty">{t.cards.noStatus}</span>
+                  )}
+                </div>
+                <div className="cdm-meta-row">
+                  <span className="cdm-meta-title">{t.cards.labels}</span>
+                  {(card.labels || []).length > 0 ? (
+                    <div className="cdm-labels-list">
+                      {(card.labels || []).map((label) => (
+                        <span key={label} className="cdm-label-chip">{label}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="cdm-meta-empty">{t.cards.noLabels}</span>
+                  )}
+                </div>
+              </div>
+            </div>
 
             {/* Description */}
             <div className="cdm-description-section">
@@ -956,6 +1192,158 @@ export default function CardDetailModal({
                       </button>
                     )
                   })}
+                </div>
+              )}
+            </div>
+
+            {/* Status & Labels — dropdown menus */}
+            <div className="cdm-sidebar-section">
+              <div className="cdm-sidebar-section-title">🏷️ {t.cards.statusAndLabels}</div>
+
+              {/* Status dropdown */}
+              <div className="cdm-dropdown-wrapper">
+                <button
+                  className="cdm-sidebar-btn cdm-dropdown-trigger"
+                  onClick={() => { setShowStatusDropdown(!showStatusDropdown); setShowLabelDropdown(false) }}
+                >
+                  {card.status ? (
+                    <><span className="cdm-status-chip-sm">{card.status}</span> ▾</>
+                  ) : (
+                    <>{t.cards.statusPlaceholder} ▾</>
+                  )}
+                </button>
+                {showStatusDropdown && (
+                  <div className="cdm-dropdown-menu">
+                    {boardStatuses.length > 0 && (
+                      <div className="cdm-dropdown-items">
+                        {boardStatuses.map((s) => (
+                          <div key={s.id} className={`cdm-dropdown-item ${card.status === s.name ? 'active' : ''}`}>
+                            <button
+                              className="cdm-dropdown-item-btn"
+                              onClick={() => handleSelectStatus(s.name)}
+                            >
+                              <span className="cdm-dropdown-dot" style={{ background: s.color }} />
+                              {s.name}
+                              {card.status === s.name && <span className="cdm-dropdown-check">✓</span>}
+                            </button>
+                            <button
+                              className="cdm-dropdown-delete-btn"
+                              onClick={() => handleDeleteBoardStatus(s.id, s.name)}
+                              title={t.common.delete}
+                            >✕</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {boardStatuses.length === 0 && (
+                      <div className="cdm-dropdown-empty">{t.cards.noStatus}</div>
+                    )}
+                    <div className="cdm-dropdown-create">
+                      <input
+                        type="text"
+                        className="cdm-dropdown-input"
+                        placeholder={t.cards.newStatusPlaceholder || 'New status...'}
+                        value={newStatusInput}
+                        onChange={(e) => setNewStatusInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            void handleCreateBoardStatus()
+                          }
+                        }}
+                      />
+                      <button
+                        className="cdm-dropdown-add-btn"
+                        onClick={() => void handleCreateBoardStatus()}
+                        disabled={!newStatusInput.trim() || creatingStatus}
+                      >
+                        + {t.cards.addStatus || 'Add status'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Label dropdown */}
+              <div className="cdm-dropdown-wrapper">
+                <button
+                  className="cdm-sidebar-btn cdm-dropdown-trigger"
+                  onClick={() => { setShowLabelDropdown(!showLabelDropdown); setShowStatusDropdown(false) }}
+                >
+                  {(card.labels || []).length > 0 ? (
+                    <><span className="cdm-labels-inline">{(card.labels || []).join(', ')}</span> ▾</>
+                  ) : (
+                    <>{t.cards.labelPlaceholder} ▾</>
+                  )}
+                </button>
+                {showLabelDropdown && (
+                  <div className="cdm-dropdown-menu">
+                    {boardLabels.length > 0 && (
+                      <div className="cdm-dropdown-items">
+                        {boardLabels.map((l) => {
+                          const isSelected = (card.labels || []).includes(l.name)
+                          return (
+                            <div key={l.id} className={`cdm-dropdown-item ${isSelected ? 'active' : ''}`}>
+                              <button
+                                className="cdm-dropdown-item-btn"
+                                onClick={() => handleSelectLabel(l.name)}
+                              >
+                                <span className="cdm-dropdown-dot" style={{ background: l.color }} />
+                                {l.name}
+                                {isSelected && <span className="cdm-dropdown-check">✓</span>}
+                              </button>
+                              <button
+                                className="cdm-dropdown-delete-btn"
+                                onClick={() => handleDeleteBoardLabel(l.id, l.name)}
+                                title={t.common.delete}
+                              >✕</button>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {boardLabels.length === 0 && (
+                      <div className="cdm-dropdown-empty">{t.cards.noLabels}</div>
+                    )}
+                    <div className="cdm-dropdown-create">
+                      <input
+                        type="text"
+                        className="cdm-dropdown-input"
+                        placeholder={t.cards.newLabelPlaceholder || 'New label...'}
+                        value={newLabelInput}
+                        onChange={(e) => setNewLabelInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            void handleCreateBoardLabel()
+                          }
+                        }}
+                      />
+                      <button
+                        className="cdm-dropdown-add-btn"
+                        onClick={() => void handleCreateBoardLabel()}
+                        disabled={!newLabelInput.trim() || creatingLabel}
+                      >
+                        + {t.cards.addLabel}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Currently applied labels */}
+              {(card.labels || []).length > 0 && (
+                <div className="cdm-sidebar-labels-list">
+                  {(card.labels || []).map((label) => (
+                    <button
+                      key={label}
+                      className="cdm-sidebar-label-chip"
+                      onClick={() => handleRemoveLabel(label)}
+                      title={t.cards.removeLabel}
+                    >
+                      {label} <span>✕</span>
+                    </button>
+                  ))}
                 </div>
               )}
             </div>

@@ -84,6 +84,8 @@ export interface Card {
   id: string
   title: string
   description: string | null
+  status?: string | null
+  labels?: string[]
   position: number
   list_id: string
   cover_color: string | null
@@ -197,6 +199,24 @@ export interface GitHubIssue {
     name: string
     color: string
   }>
+}
+
+export interface BoardStatus {
+  id: string
+  board_id: string
+  name: string
+  color: string
+  created_by: string | null
+  created_at: string
+}
+
+export interface BoardLabel {
+  id: string
+  board_id: string
+  name: string
+  color: string
+  created_by: string | null
+  created_at: string
 }
 
 // Extended types with relations

@@ -122,6 +122,46 @@
   margin-top: 4px;
 }
 
+.card-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.card-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: #deebff;
+  color: #0747a6;
+}
+
+.card-label-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  background-color: #e3fcef;
+  color: #006644;
+}
+
+.card-label-more {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background-color: #f4f5f7;
+  color: #5e6c84;
+}
+
 /* Card Menu Button */
 .card-menu-container {
   position: absolute;
@@ -142,7 +182,10 @@
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.2s, background-color 0.2s, box-shadow 0.2s;
+  transition:
+    opacity 0.2s,
+    background-color 0.2s,
+    box-shadow 0.2s;
   cursor: pointer;
   border: none;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -162,7 +205,9 @@
   position: fixed;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.1);
   min-width: 220px;
   z-index: 9999;
   animation: slideDown 0.15s ease-out;
@@ -248,7 +293,9 @@
   height: 32px;
   border-radius: 3px;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -281,7 +328,9 @@
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.2s, background-color 0.2s;
+  transition:
+    opacity 0.2s,
+    background-color 0.2s;
 }
 
 .card-item:hover .delete-card-button {
@@ -418,7 +467,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s, transform 0.2s;
+  transition:
+    background-color 0.2s,
+    transform 0.2s;
 }
 
 .image-modal-close:hover {
@@ -677,7 +728,9 @@
   border-radius: 8px;
   font-size: 15px;
   color: #172b4d;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
   background-color: #fafbfc;
 }
 
