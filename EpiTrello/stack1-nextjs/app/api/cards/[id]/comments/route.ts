@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { notifyCommentAdded } from '@/lib/email-service'
 
 function getSupabaseAdmin() {
   return createClient(
@@ -100,6 +101,11 @@ export async function POST(
         action_data: { comment_id: comment.id },
       })
 
+    // Send email notification (async, don't await to not block response)
+    notifyCommentAdded(params.id, content.trim(), user.id).catch(err =>
+      console.error('Failed to send comment notification:', err)
+    )
+
     // Get profile for the response
     const { data: profile } = await supabaseAdmin
       .from('profiles')
@@ -123,7 +129,7 @@ export async function POST(
 // PUT: Edit a comment
 export async function PUT(
   request: NextRequest,
-//   _context: { params: { id: string } }
+  //   _context: { params: { id: string } }
 ) {
   try {
     const supabase = createRouteHandlerClient({ cookies })
