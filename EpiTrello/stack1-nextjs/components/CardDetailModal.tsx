@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useRef, useEffect, ChangeEvent } from 'react'
+import { useState, useRef, useEffect, useCallback, ChangeEvent } from 'react'
 import Image from 'next/image'
 import { useLanguage } from '@/lib/language-context'
 import { useNotification } from '@/components/NotificationContext'
+import { supabaseBrowser } from '@/lib/supabase-browser'
 import type { Card, BoardMember, CardAssignment, CardImage, CardComment, CardActivity, BoardStatus, BoardLabel } from '@/lib/supabase'
 import GitHubPowerUp from './GitHubPowerUp'
 import './CardDetailModal.css'
@@ -131,6 +132,8 @@ export default function CardDetailModal({
   const [carouselIndex, setCarouselIndex] = useState(0)
 
   // Commentary & Activity state
+  const [commentsExpanded, setCommentsExpanded] = useState(true)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [comments, setComments] = useState<CardComment[]>([])
   const [activities, setActivities] = useState<CardActivity[]>([])
   const [feedFilter, setFeedFilter] = useState<'all' | 'comments' | 'activity'>('all')
@@ -139,10 +142,23 @@ export default function CardDetailModal({
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [editingCommentText, setEditingCommentText] = useState('')
   const [loadingFeed, setLoadingFeed] = useState(false)
+  const [replyingToId, setReplyingToId] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState('')
+
+  // Mention state
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false)
+  const [mentionFilter, setMentionFilter] = useState('')
+  const [mentionStartPos, setMentionStartPos] = useState<number | null>(null)
+  const [mentionTarget, setMentionTarget] = useState<'comment' | 'edit' | 'reply'>('comment')
+  const [mentionSelectedIndex, setMentionSelectedIndex] = useState(0)
 
   const titleInputRef = useRef<HTMLInputElement>(null)
   const descriptionRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const commentTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const replyTextareaRef = useRef<HTMLTextAreaElement>(null)
+  const feedChannelRef = useRef<ReturnType<typeof supabaseBrowser.channel> | null>(null)
   const { t } = useLanguage()
   const { confirm, alert } = useNotification()
 
@@ -182,6 +198,13 @@ export default function CardDetailModal({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onClose, showGitHubPowerUp, showAssignPanel, showImageModal])
 
+  // Fetch current user ID
+  useEffect(() => {
+    supabaseBrowser.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUserId(user.id)
+    })
+  }, [])
+
   // Fetch comments & activity on mount
   useEffect(() => {
     const fetchFeed = async () => {
@@ -207,6 +230,47 @@ export default function CardDetailModal({
     }
     fetchFeed()
   }, [card.id])
+
+  // Realtime subscription for comments & activity (broadcast pattern)
+  useEffect(() => {
+    const refreshFeed = async () => {
+      try {
+        const [commentsRes, activityRes] = await Promise.all([
+          fetch(`/api/cards/${card.id}/comments`),
+          fetch(`/api/cards/${card.id}/activity`),
+        ])
+        if (commentsRes.ok) {
+          const data = await commentsRes.json()
+          setComments(data.comments || [])
+          onCommentCountChange?.(data.comments?.length || 0)
+        }
+        if (activityRes.ok) {
+          const data = await activityRes.json()
+          setActivities(data.activities || [])
+        }
+      } catch (err) {
+        console.error('Realtime feed refresh error:', err)
+      }
+    }
+
+    const channel = supabaseBrowser
+      .channel(`card-feed-${card.id}`)
+      .on(
+        'broadcast',
+        { event: 'feed-update' },
+        () => {
+          refreshFeed()
+        }
+      )
+      .subscribe()
+
+    feedChannelRef.current = channel
+
+    return () => {
+      feedChannelRef.current = null
+      supabaseBrowser.removeChannel(channel)
+    }
+  }, [card.id, onCommentCountChange])
 
   // Fetch board-level statuses & labels
   useEffect(() => {
@@ -569,6 +633,122 @@ export default function CardDetailModal({
   }
 
   // --- Commentary & Activity handlers ---
+  const broadcastFeedChange = () => {
+    feedChannelRef.current?.send({
+      type: 'broadcast',
+      event: 'feed-update',
+      payload: { timestamp: Date.now() },
+    })
+  }
+
+  // --- Mention helpers ---
+  const mentionableMembers = boardMembers.filter((m) => m.user_id !== currentUserId)
+
+  const filteredMentionMembers = mentionableMembers.filter((m) =>
+    (m.username || '').toLowerCase().includes(mentionFilter.toLowerCase())
+  )
+
+  const handleTextareaChange = useCallback((
+    value: string,
+    cursorPos: number,
+    target: 'comment' | 'edit' | 'reply',
+  ) => {
+    if (target === 'comment') setCommentText(value)
+    else if (target === 'reply') setReplyText(value)
+    else setEditingCommentText(value)
+
+    // Detect if user is typing a mention
+    const textBeforeCursor = value.slice(0, cursorPos)
+    const atIndex = textBeforeCursor.lastIndexOf('@')
+
+    if (atIndex !== -1) {
+      const charBefore = atIndex > 0 ? textBeforeCursor[atIndex - 1] : ' '
+      const textAfterAt = textBeforeCursor.slice(atIndex + 1)
+      // '@' must be preceded by space/newline/start of text, and no space after until cursor
+      if ((charBefore === ' ' || charBefore === '\n' || atIndex === 0) && !/\s/.test(textAfterAt)) {
+        setShowMentionDropdown(true)
+        setMentionFilter(textAfterAt)
+        setMentionStartPos(atIndex)
+        setMentionTarget(target)
+        setMentionSelectedIndex(0)
+        return
+      }
+    }
+    setShowMentionDropdown(false)
+    setMentionFilter('')
+    setMentionStartPos(null)
+  }, [])
+
+  const insertMention = useCallback((username: string) => {
+    if (mentionStartPos === null) return
+    const text = mentionTarget === 'comment' ? commentText : mentionTarget === 'reply' ? replyText : editingCommentText
+    const before = text.slice(0, mentionStartPos)
+    const afterCursor = text.slice(mentionStartPos + 1 + mentionFilter.length)
+    const newText = `${before}@${username} ${afterCursor}`
+
+    if (mentionTarget === 'comment') {
+      setCommentText(newText)
+      setTimeout(() => {
+        const pos = mentionStartPos + username.length + 2
+        commentTextareaRef.current?.setSelectionRange(pos, pos)
+        commentTextareaRef.current?.focus()
+      }, 0)
+    } else if (mentionTarget === 'reply') {
+      setReplyText(newText)
+      setTimeout(() => {
+        const pos = mentionStartPos + username.length + 2
+        replyTextareaRef.current?.setSelectionRange(pos, pos)
+        replyTextareaRef.current?.focus()
+      }, 0)
+    } else {
+      setEditingCommentText(newText)
+      setTimeout(() => {
+        const pos = mentionStartPos + username.length + 2
+        editTextareaRef.current?.setSelectionRange(pos, pos)
+        editTextareaRef.current?.focus()
+      }, 0)
+    }
+    setShowMentionDropdown(false)
+    setMentionFilter('')
+    setMentionStartPos(null)
+  }, [mentionStartPos, mentionTarget, mentionFilter, commentText, editingCommentText, replyText])
+
+  const handleMentionKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!showMentionDropdown || filteredMentionMembers.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setMentionSelectedIndex((prev) => (prev + 1) % filteredMentionMembers.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setMentionSelectedIndex((prev) => (prev - 1 + filteredMentionMembers.length) % filteredMentionMembers.length)
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault()
+      insertMention(filteredMentionMembers[mentionSelectedIndex]?.username || '')
+    } else if (e.key === 'Escape') {
+      setShowMentionDropdown(false)
+    }
+  }, [showMentionDropdown, filteredMentionMembers, mentionSelectedIndex, insertMention])
+
+  const renderCommentContent = (content: string) => {
+    const memberUsernames = boardMembers.map((m) => m.username).filter(Boolean) as string[]
+    if (memberUsernames.length === 0) return content
+    const currentUsername = boardMembers.find((m) => m.user_id === currentUserId)?.username
+    // Build a regex that matches @username (word boundary or end-of-string)
+    const escaped = memberUsernames.map((u) => u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    const regex = new RegExp(`(@(?:${escaped.join('|')}))(?=\\s|$|[.,;!?])`, 'g')
+    const parts = content.split(regex)
+    return parts.map((part, i) => {
+      if (regex.test(part)) {
+        regex.lastIndex = 0
+        const mentionedName = part.slice(1) // remove the @
+        const isMe = currentUsername && mentionedName === currentUsername
+        return <span key={i} className={`cdm-mention-highlight${isMe ? ' cdm-mention-highlight-me' : ''}`}>{part}</span>
+      }
+      regex.lastIndex = 0
+      return part
+    })
+  }
+
   const formatActivityDate = (dateString: string) => {
     const date = new Date(dateString)
     const day = String(date.getDate()).padStart(2, '0')
@@ -602,13 +782,17 @@ export default function CardDetailModal({
   }
 
   const handleSubmitComment = async () => {
-    if (!commentText.trim() || submittingComment) return
+    const text = replyingToId ? replyText : commentText
+    if (!text.trim() || submittingComment) return
     setSubmittingComment(true)
     try {
       const response = await fetch(`/api/cards/${card.id}/comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: commentText }),
+        body: JSON.stringify({
+          content: text,
+          parent_comment_id: replyingToId || undefined
+        }),
       })
       if (response.ok) {
         const { comment } = await response.json()
@@ -617,13 +801,19 @@ export default function CardDetailModal({
           onCommentCountChange?.(updated.length)
           return updated
         })
-        setCommentText('')
+        if (replyingToId) {
+          setReplyText('')
+          setReplyingToId(null)
+        } else {
+          setCommentText('')
+        }
         // Refresh activity to show the new "comment_added" activity
         const actRes = await fetch(`/api/cards/${card.id}/activity`)
         if (actRes.ok) {
           const data = await actRes.json()
           setActivities(data.activities || [])
         }
+        broadcastFeedChange()
       }
     } catch (error) {
       console.error('Error posting comment:', error)
@@ -647,6 +837,7 @@ export default function CardDetailModal({
         )
         setEditingCommentId(null)
         setEditingCommentText('')
+        broadcastFeedChange()
       }
     } catch (error) {
       console.error('Error editing comment:', error)
@@ -680,6 +871,7 @@ export default function CardDetailModal({
           const data = await actRes.json()
           setActivities(data.activities || [])
         }
+        broadcastFeedChange()
       }
     } catch (error) {
       console.error('Error deleting comment:', error)
@@ -707,7 +899,7 @@ export default function CardDetailModal({
     const items: FeedItem[] = []
 
     if (feedFilter === 'all' || feedFilter === 'comments') {
-      for (const c of comments) {
+      for (const c of comments.filter((c) => !c.parent_comment_id)) {
         items.push({ type: 'comment', data: c, timestamp: c.created_at })
       }
     }
@@ -987,11 +1179,17 @@ export default function CardDetailModal({
 
             {/* ===== Commentary & Activity ===== */}
             <div className="cdm-feed-section">
-              <div className="cdm-section-header">
+              <button
+                className="cdm-section-header cdm-section-toggle"
+                onClick={() => setCommentsExpanded((prev) => !prev)}
+                type="button"
+              >
                 <span className="cdm-section-icon">💬</span>
                 <span className="cdm-section-label">{t.cards.commentaryAndActivity}</span>
-              </div>
+                <span className={`cdm-toggle-arrow ${commentsExpanded ? 'expanded' : 'collapsed'}`}>▾</span>
+              </button>
 
+              {commentsExpanded && <>
               {/* Filter tabs */}
               <div className="cdm-feed-tabs">
                 <button
@@ -1016,25 +1214,53 @@ export default function CardDetailModal({
 
               {/* Comment input */}
               <div className="cdm-comment-input-wrapper">
-                <textarea
-                  className="cdm-comment-input"
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder={t.cards.writeComment}
-                  rows={2}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSubmitComment()
-                    }
-                  }}
-                />
+                <div className="cdm-mention-container">
+                  <textarea
+                    ref={commentTextareaRef}
+                    className="cdm-comment-input"
+                    value={commentText}
+                    onChange={(e) => handleTextareaChange(e.target.value, e.target.selectionStart || 0, 'comment')}
+                    placeholder={t.cards.writeComment}
+                    rows={3}
+                    onKeyDown={(e) => {
+                      if (showMentionDropdown && mentionTarget === 'comment') {
+                        handleMentionKeyDown(e)
+                        if (['ArrowDown', 'ArrowUp', 'Tab'].includes(e.key)) return
+                        if (e.key === 'Enter' && filteredMentionMembers.length > 0) return
+                      }
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSubmitComment()
+                      }
+                    }}
+                  />
+                  {showMentionDropdown && mentionTarget === 'comment' && filteredMentionMembers.length > 0 && (
+                    <div className="cdm-mention-dropdown">
+                      {filteredMentionMembers.map((member, idx) => (
+                        <button
+                          key={member.user_id}
+                          className={`cdm-mention-item ${idx === mentionSelectedIndex ? 'selected' : ''}`}
+                          onMouseDown={(e) => { e.preventDefault(); insertMention(member.username || '') }}
+                          onMouseEnter={() => setMentionSelectedIndex(idx)}
+                          type="button"
+                        >
+                          {member.avatar_url ? (
+                            <Image src={member.avatar_url} alt="" width={20} height={20} className="cdm-mention-avatar" unoptimized />
+                          ) : (
+                            <span className="cdm-mention-initials">{getInitials(member.username)}</span>
+                          )}
+                          <span className="cdm-mention-name">{member.username}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button
                   className="cdm-comment-send-btn"
                   onClick={handleSubmitComment}
                   disabled={!commentText.trim() || submittingComment}
                 >
-                  {t.cards.send}
+                  {t.common.send}
                 </button>
               </div>
 
@@ -1056,7 +1282,7 @@ export default function CardDetailModal({
                       return (
                         <div key={`comment-${comment.id}`} className="cdm-feed-item cdm-feed-comment">
                           <div className="cdm-feed-avatar">
-                            {comment.avatar_url ? (
+                            {comment.avatar_url && comment.avatar_url.trim() ? (
                               <Image src={comment.avatar_url} alt={comment.username || '?'} width={32} height={32} className="cdm-avatar-img" unoptimized />
                             ) : (
                               <span className="cdm-avatar-initials">{getInitials(comment.username)}</span>
@@ -1070,13 +1296,43 @@ export default function CardDetailModal({
                             </div>
                             {isEditing ? (
                               <div className="cdm-comment-edit-wrapper">
-                                <textarea
-                                  className="cdm-comment-input"
-                                  value={editingCommentText}
-                                  onChange={(e) => setEditingCommentText(e.target.value)}
-                                  rows={2}
-                                  placeholder={t.cards.writeComment}
-                                />
+                                <div className="cdm-mention-container">
+                                  <textarea
+                                    ref={editTextareaRef}
+                                    className="cdm-comment-input"
+                                    value={editingCommentText}
+                                    onChange={(e) => handleTextareaChange(e.target.value, e.target.selectionStart || 0, 'edit')}
+                                    rows={3}
+                                    placeholder={t.cards.writeComment}
+                                    onKeyDown={(e) => {
+                                      if (showMentionDropdown && mentionTarget === 'edit') {
+                                        handleMentionKeyDown(e)
+                                        if (['ArrowDown', 'ArrowUp', 'Tab'].includes(e.key)) return
+                                        if (e.key === 'Enter' && filteredMentionMembers.length > 0) return
+                                      }
+                                    }}
+                                  />
+                                  {showMentionDropdown && mentionTarget === 'edit' && filteredMentionMembers.length > 0 && (
+                                    <div className="cdm-mention-dropdown">
+                                      {filteredMentionMembers.map((member, idx) => (
+                                        <button
+                                          key={member.user_id}
+                                          className={`cdm-mention-item ${idx === mentionSelectedIndex ? 'selected' : ''}`}
+                                          onMouseDown={(e) => { e.preventDefault(); insertMention(member.username || '') }}
+                                          onMouseEnter={() => setMentionSelectedIndex(idx)}
+                                          type="button"
+                                        >
+                                          {member.avatar_url ? (
+                                            <Image src={member.avatar_url} alt="" width={20} height={20} className="cdm-mention-avatar" unoptimized />
+                                          ) : (
+                                            <span className="cdm-mention-initials">{getInitials(member.username)}</span>
+                                          )}
+                                          <span className="cdm-mention-name">{member.username}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                                 <div className="cdm-edit-actions">
                                   <button className="cdm-btn-primary" onClick={() => handleEditComment(comment.id)}>{t.common.save}</button>
                                   <button className="cdm-btn-secondary" onClick={() => { setEditingCommentId(null); setEditingCommentText('') }}>{t.common.cancel}</button>
@@ -1084,21 +1340,139 @@ export default function CardDetailModal({
                               </div>
                             ) : (
                               <>
-                                <div className="cdm-comment-text">{comment.content}</div>
+                                <div className="cdm-comment-text">{renderCommentContent(comment.content)}</div>
                                 <div className="cdm-comment-actions">
                                   <button
                                     className="cdm-comment-action-btn"
-                                    onClick={() => { setEditingCommentId(comment.id); setEditingCommentText(comment.content) }}
+                                    onClick={() => setReplyingToId(comment.id)}
                                   >
-                                    {t.cards.editComment}
+                                    {t.cards.replyComment}
                                   </button>
-                                  <button
-                                    className="cdm-comment-action-btn cdm-comment-delete-btn"
-                                    onClick={() => handleDeleteComment(comment.id)}
-                                  >
-                                    {t.cards.deleteComment}
-                                  </button>
+                                  {currentUserId === comment.user_id && (
+                                    <>
+                                      <button
+                                        className="cdm-comment-action-btn"
+                                        onClick={() => { setEditingCommentId(comment.id); setEditingCommentText(comment.content) }}
+                                      >
+                                        {t.cards.editComment}
+                                      </button>
+                                      <button
+                                        className="cdm-comment-action-btn cdm-comment-delete-btn"
+                                        onClick={() => handleDeleteComment(comment.id)}
+                                      >
+                                        {t.cards.deleteComment}
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
+                                {replyingToId === comment.id && (
+                                  <div className="cdm-reply-input-wrapper">
+                                    <div className="cdm-reply-indicator">
+                                      <span className="cdm-reply-to-badge">{t.cards.replyingTo} {comment.username}</span>
+                                    </div>
+                                    <div className="cdm-mention-container">
+                                      <textarea
+                                        ref={replyTextareaRef}
+                                        className="cdm-comment-input"
+                                        value={replyText}
+                                        onChange={(e) => handleTextareaChange(e.target.value, e.target.selectionStart || 0, 'reply')}
+                                        placeholder={t.cards.writeReply}
+                                        rows={2}
+                                        onKeyDown={(e) => {
+                                          if (showMentionDropdown && mentionTarget === 'reply') {
+                                            handleMentionKeyDown(e)
+                                            if (['ArrowDown', 'ArrowUp', 'Tab'].includes(e.key)) return
+                                            if (e.key === 'Enter' && filteredMentionMembers.length > 0) return
+                                          }
+                                          if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault()
+                                            handleSubmitComment()
+                                          }
+                                        }}
+                                      />
+                                      {showMentionDropdown && mentionTarget === 'reply' && filteredMentionMembers.length > 0 && (
+                                        <div className="cdm-mention-dropdown">
+                                          {filteredMentionMembers.map((member, idx) => (
+                                            <button
+                                              key={member.user_id}
+                                              className={`cdm-mention-item ${idx === mentionSelectedIndex ? 'selected' : ''}`}
+                                              onMouseDown={(e) => { e.preventDefault(); insertMention(member.username || '') }}
+                                              onMouseEnter={() => setMentionSelectedIndex(idx)}
+                                              type="button"
+                                            >
+                                              {member.avatar_url ? (
+                                                <Image src={member.avatar_url} alt="" width={20} height={20} className="cdm-mention-avatar" unoptimized />
+                                              ) : (
+                                                <span className="cdm-mention-initials">{getInitials(member.username)}</span>
+                                              )}
+                                              <span className="cdm-mention-name">{member.username}</span>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="cdm-reply-actions">
+                                      <button className="cdm-btn-primary" onClick={handleSubmitComment}>{t.common.send}</button>
+                                      <button className="cdm-btn-secondary" onClick={() => { setReplyingToId(null); setReplyText('') }}>{t.common.cancel}</button>
+                                    </div>
+                                  </div>
+                                )}
+                                {/* Nested replies */}
+                                {comments.filter((r) => r.parent_comment_id === comment.id).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).map((reply) => {
+                                  const isEditingReply = editingCommentId === reply.id
+                                  const replyWasEdited = reply.updated_at !== reply.created_at
+                                  return (
+                                    <div key={`reply-${reply.id}`} className="cdm-reply-thread-item">
+                                      <div className="cdm-feed-avatar">
+                                        {reply.avatar_url && reply.avatar_url.trim() ? (
+                                          <Image src={reply.avatar_url} alt={reply.username || '?'} width={32} height={32} className="cdm-avatar-img" unoptimized />
+                                        ) : (
+                                          <span className="cdm-avatar-initials">{getInitials(reply.username)}</span>
+                                        )}
+                                      </div>
+                                      <div className="cdm-reply-body">
+                                        <div className="cdm-feed-header">
+                                          <span className="cdm-feed-username">{reply.username}</span>
+                                          <span className="cdm-feed-time">{formatActivityDate(reply.created_at)}</span>
+                                          {replyWasEdited && <span className="cdm-feed-edited">{t.cards.commentEdited}</span>}
+                                        </div>
+                                        {isEditingReply ? (
+                                          <div className="cdm-comment-edit-wrapper">
+                                            <textarea
+                                              className="cdm-comment-input"
+                                              value={editingCommentText}
+                                              onChange={(e) => setEditingCommentText(e.target.value)}
+                                              rows={2}
+                                              placeholder={t.cards.writeReply}
+                                            />
+                                            <div className="cdm-edit-actions">
+                                              <button className="cdm-btn-primary" onClick={() => handleEditComment(reply.id)}>{t.common.save}</button>
+                                              <button className="cdm-btn-secondary" onClick={() => { setEditingCommentId(null); setEditingCommentText('') }}>{t.common.cancel}</button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <>
+                                            <div className="cdm-comment-text">{renderCommentContent(reply.content)}</div>
+                                            <div className="cdm-comment-actions">
+                                              <button
+                                                className="cdm-comment-action-btn"
+                                                onClick={() => setReplyingToId(comment.id)}
+                                              >
+                                                {t.cards.replyComment}
+                                              </button>
+                                              {currentUserId === reply.user_id && (
+                                                <>
+                                                  <button className="cdm-comment-action-btn" onClick={() => { setEditingCommentId(reply.id); setEditingCommentText(reply.content) }}>{t.cards.editComment}</button>
+                                                  <button className="cdm-comment-action-btn cdm-comment-delete-btn" onClick={() => handleDeleteComment(reply.id)}>{t.cards.deleteComment}</button>
+                                                </>
+                                              )}
+                                            </div>
+                                          </>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )
+                                })}
                               </>
                             )}
                           </div>
@@ -1126,6 +1500,7 @@ export default function CardDetailModal({
                   })}
                 </div>
               )}
+              </>}
             </div>
           </div>
 

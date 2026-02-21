@@ -152,6 +152,7 @@ export interface CardComment {
   content: string
   created_at: string
   updated_at: string
+  parent_comment_id?: string | null
   // Extended fields
   username?: string
   avatar_url?: string | null
