@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { notifyCardAssignment } from '@/lib/email-service'
 
 function getSupabaseAdmin() {
   return createClient(
@@ -130,6 +131,11 @@ export async function POST(
         })
 
       if (insertError) throw insertError
+
+      // Send email notification (async, don't await to not block response)
+      notifyCardAssignment(cardId, user_id, user.id).catch(err =>
+        console.error('Failed to send assignment notification:', err)
+      )
 
       // Return updated assignments list
       const { data: assignments } = await supabaseAdmin
