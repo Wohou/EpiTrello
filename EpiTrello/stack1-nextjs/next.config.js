@@ -62,7 +62,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https: blob:",
               "font-src 'self' data:",
-              "connect-src 'self' https://gerfhenmhblqgxemwqbe.supabase.co wss://gerfhenmhblqgxemwqbe.supabase.co",
+              "connect-src 'self' https://gerfhenmhblqgxemwqbe.supabase.co wss://gerfhenmhblqgxemwqbe.supabase.co https://api.github.com",
               "frame-ancestors 'none'",
             ].join('; '),
           },
