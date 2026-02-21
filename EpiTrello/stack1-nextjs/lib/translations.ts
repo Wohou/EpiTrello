@@ -415,6 +415,12 @@ export const translations = {
       completionTitle: '✅ Marquage terminé',
       completionDesc: 'Marquez une carte comme terminée en cliquant sur la case à cocher. La carte apparaîtra avec un style barré pour indiquer qu\'elle est complétée.',
 
+      statusTitle: '📌 Statuts',
+      statusDesc: 'Créez des statuts personnalisés au niveau du board (ex : À valider, En attente, Bloqué). Assignez un statut à chaque carte depuis le panneau de détails. Le statut apparaît sous forme de badge coloré directement sur la carte. Vous pouvez créer, modifier ou supprimer les statuts à tout moment.',
+
+      labelTitle: '🏷️ Labels',
+      labelDesc: 'Ajoutez des labels personnalisés à vos cartes pour les catégoriser (ex : Bug, Feature, Urgent). Chaque label possède un nom et une couleur. Les labels assignés apparaissent sous forme de badges sur la carte. Vous pouvez créer de nouveaux labels, les assigner ou les retirer depuis le panneau de détails.',
+
       commentsTitle: '💬 Commentaires',
       commentsDesc: 'Ajoutez des commentaires pour discuter, donner du feedback ou partager des informations. Vous pouvez modifier et supprimer vos propres commentaires. Un compteur de commentaires apparaît sur la carte.',
 
@@ -855,6 +861,12 @@ export const translations = {
 
       completionTitle: '✅ Completion',
       completionDesc: 'Mark a card as complete by clicking the checkbox. The card will appear with a strikethrough style to indicate it\'s completed.',
+
+      statusTitle: '📌 Statuses',
+      statusDesc: 'Create custom board-level statuses (e.g., Pending Review, On Hold, Blocked). Assign a status to each card from the detail panel. The status appears as a colored badge directly on the card. You can create, edit, or delete statuses at any time.',
+
+      labelTitle: '🏷️ Labels',
+      labelDesc: 'Add custom labels to your cards for categorization (e.g., Bug, Feature, Urgent). Each label has a name and a color. Assigned labels appear as badges on the card. You can create new labels, assign or remove them from the detail panel.',
 
       commentsTitle: '💬 Comments',
       commentsDesc: 'Add comments to discuss, give feedback, or share information. You can edit and delete your own comments. A comment counter appears on the card.',

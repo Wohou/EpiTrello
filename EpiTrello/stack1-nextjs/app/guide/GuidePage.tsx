@@ -395,6 +395,29 @@ export default function GuidePage() {
               </div>
 
               <div className="guide-feature-card">
+                <div className="guide-feature-card-icon">📌</div>
+                <h3>{t.statusTitle}</h3>
+                <p>{t.statusDesc}</p>
+                <div className="guide-status-demo">
+                  <span className="guide-status-badge guide-status-badge-blue">{guideLang === 'fr' ? 'À valider' : 'Pending Review'}</span>
+                  <span className="guide-status-badge guide-status-badge-yellow">{guideLang === 'fr' ? 'En attente' : 'On Hold'}</span>
+                  <span className="guide-status-badge guide-status-badge-red">{guideLang === 'fr' ? 'Bloqué' : 'Blocked'}</span>
+                </div>
+              </div>
+
+              <div className="guide-feature-card">
+                <div className="guide-feature-card-icon">🏷️</div>
+                <h3>{t.labelTitle}</h3>
+                <p>{t.labelDesc}</p>
+                <div className="guide-label-demo">
+                  <span className="guide-label-badge guide-label-badge-red">Bug</span>
+                  <span className="guide-label-badge guide-label-badge-green">Feature</span>
+                  <span className="guide-label-badge guide-label-badge-yellow">Urgent</span>
+                  <span className="guide-label-badge guide-label-badge-blue">UI/UX</span>
+                </div>
+              </div>
+
+              <div className="guide-feature-card">
                 <div className="guide-feature-card-icon">💬</div>
                 <h3>{t.commentsTitle}</h3>
                 <p>{t.commentsDesc}</p>

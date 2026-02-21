@@ -660,6 +660,71 @@
   color: #fca5a5;
 }
 
+/* Status Demo */
+.guide-status-demo {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.guide-status-badge {
+  font-size: 11px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.guide-status-badge-blue {
+  background: #deebff;
+  color: #0747a6;
+}
+
+.guide-status-badge-yellow {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.guide-status-badge-red {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Label Demo */
+.guide-label-demo {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.guide-label-badge {
+  font-size: 11px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.guide-label-badge-red {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.guide-label-badge-green {
+  background: #e3fcef;
+  color: #006644;
+}
+
+.guide-label-badge-yellow {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.guide-label-badge-blue {
+  background: #deebff;
+  color: #0747a6;
+}
+
 /* Completion Demo */
 .guide-completion-demo {
   display: flex;
