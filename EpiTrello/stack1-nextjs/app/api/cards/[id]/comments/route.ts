@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
-import { notifyCommentAdded } from '@/lib/email-service'
+import { notifyCommentAdded, notifyCommentMention, extractMentionedUserIds } from '@/lib/email-service'
 
 function getSupabaseAdmin() {
   return createClient(
@@ -102,8 +102,37 @@ export async function POST(
         action_data: { comment_id: comment.id },
       })
 
-    // Send email notification (async, don't await to not block response)
-    notifyCommentAdded(params.id, content.trim(), user.id).catch(err =>
+    // Get board_id for mentions and notifications
+    const { data: cardData } = await supabaseAdmin
+      .from('cards')
+      .select('list_id')
+      .eq('id', params.id)
+      .single()
+
+    let mentionedIds: string[] = []
+
+    if (cardData) {
+      const { data: listData } = await supabaseAdmin
+        .from('lists')
+        .select('board_id')
+        .eq('id', cardData.list_id)
+        .single()
+
+      if (listData) {
+        // Extract mentions first
+        mentionedIds = await extractMentionedUserIds(content.trim(), listData.board_id)
+
+        // Send mention notifications (prioritaire)
+        if (mentionedIds.length > 0) {
+          notifyCommentMention(params.id, content.trim(), mentionedIds, user.id).catch(err =>
+            console.error('Failed to send mention notification:', err)
+          )
+        }
+      }
+    }
+
+    // Send comment notification, excluding users already notified by mention
+    notifyCommentAdded(params.id, content.trim(), user.id, mentionedIds).catch(err =>
       console.error('Failed to send comment notification:', err)
     )
 

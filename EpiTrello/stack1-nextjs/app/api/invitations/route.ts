@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
+import { notifyBoardInvitation } from '@/lib/email-service'
 
 // GET: Fetch all invitations for the current user
 export async function GET() {
@@ -174,6 +175,11 @@ export async function POST(request: NextRequest) {
 
       if (updateError) throw updateError
 
+      // Send email notification
+      notifyBoardInvitation(board_id, invitee_id, user.id).catch(err =>
+        console.error('Failed to send invitation notification:', err)
+      )
+
       return NextResponse.json(updatedInvitation?.[0] || updatedInvitation, { status: 200 })
     }
 
@@ -189,6 +195,11 @@ export async function POST(request: NextRequest) {
       .select()
 
     if (error) throw error
+
+    // Send email notification
+    notifyBoardInvitation(board_id, invitee_id, user.id).catch(err =>
+      console.error('Failed to send invitation notification:', err)
+    )
 
     return NextResponse.json(invitation?.[0] || invitation, { status: 201 })
   } catch (error) {
