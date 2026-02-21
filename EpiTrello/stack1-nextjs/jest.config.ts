@@ -22,6 +22,11 @@ const config: Config = {
     '!**/*.d.ts',
     '!app/**/layout.tsx',
     '!app/**/page.tsx',
+    '!components/ui/**',
+    '!lib/utils.ts',
+    '!**/node_modules/**',
+    '!**/.next/**',
+    '!**/vendor/**',
   ],
   coverageReporters: ['text', 'text-summary', 'json-summary', 'lcov'],
 }
