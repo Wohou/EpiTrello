@@ -1,7 +1,14 @@
-import { Resend } from 'resend'
+import nodemailer from 'nodemailer'
 import { createClient } from '@supabase/supabase-js'
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
+// Gmail SMTP - simple à configurer
+const transporter = process.env.GMAIL_USER ? nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+    },
+}) : null
 
 function getSupabaseAdmin() {
     return createClient(
@@ -50,7 +57,7 @@ function getEmailTemplate(data: EmailData, recipientUsername: string): { subject
 
     const templates = {
         card_assigned: {
-            subject: `📋 ${data.actorUsername} vous a assigné à la carte "${data.cardTitle}"`,
+            subject: `📋 ${data.actorUsername} vous a assigné à "${data.cardTitle}"`,
             html: `
         <!DOCTYPE html><html><head>${baseStyles}</head><body>
           <div class="container">
@@ -67,7 +74,7 @@ function getEmailTemplate(data: EmailData, recipientUsername: string): { subject
       `
         },
         comment_added: {
-            subject: `💬 ${data.actorUsername} a commenté la carte "${data.cardTitle}"`,
+            subject: `💬 ${data.actorUsername} a commenté "${data.cardTitle}"`,
             html: `
         <!DOCTYPE html><html><head>${baseStyles}</head><body>
           <div class="container">
@@ -84,7 +91,7 @@ function getEmailTemplate(data: EmailData, recipientUsername: string): { subject
       `
         },
         card_moved: {
-            subject: `🔄 ${data.actorUsername} a déplacé la carte "${data.cardTitle}"`,
+            subject: `🔄 ${data.actorUsername} a déplacé "${data.cardTitle}"`,
             html: `
         <!DOCTYPE html><html><head>${baseStyles}</head><body>
           <div class="container">
@@ -168,27 +175,18 @@ async function getBoardMembers(boardId: string): Promise<UserInfo[]> {
 }
 
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
-    if (!resend) {
-        console.log('[Email] Not configured, skipping:', to, '-', subject)
+    if (!transporter) {
+        console.log('[Email] Gmail not configured, skipping:', to, '-', subject)
         return false
     }
 
     try {
-        const { error } = await resend.emails.send({
-            from: process.env.EMAIL_FROM || 'EpiTrello <noreply@epitrello.eu>',
-            to: [to],
+        await transporter.sendMail({
+            from: `"EpiTrello" <${process.env.GMAIL_USER}>`,
+            to,
             subject,
             html,
         })
-        if (error) {
-            // Resend free tier: can only send to your own email without verified domain
-            if (error.name === 'validation_error' && error.message?.includes('verify a domain')) {
-                console.log('[Email] Domain not verified, logging only:', to, '-', subject)
-                return false
-            }
-            console.error('[Email] Error:', error)
-            return false
-        }
         console.log('[Email] Sent to:', to)
         return true
     } catch (error) {
