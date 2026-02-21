@@ -69,7 +69,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { content } = await request.json()
+    const { content, parent_comment_id } = await request.json()
 
     if (!content || !content.trim()) {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 })
@@ -84,6 +84,7 @@ export async function POST(
         card_id: params.id,
         user_id: user.id,
         content: content.trim(),
+        parent_comment_id: parent_comment_id || null,
       })
       .select()
       .single()
