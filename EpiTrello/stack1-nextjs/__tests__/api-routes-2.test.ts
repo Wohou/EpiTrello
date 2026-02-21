@@ -100,6 +100,20 @@ jest.mock('../lib/api-utils', () => ({
   getGitHubToken: (...args: unknown[]) => mockGetGitHubToken(...args),
 }))
 
+// Mock nodemailer (used by email-service)
+jest.mock('nodemailer', () => ({
+  createTransport: jest.fn(() => ({
+    sendMail: jest.fn().mockResolvedValue({ messageId: 'test-id' }),
+  })),
+}))
+
+// Mock email-service
+jest.mock('../lib/email-service', () => ({
+  notifyCommentAdded: jest.fn().mockResolvedValue(undefined),
+  notifyCardAssignment: jest.fn().mockResolvedValue(undefined),
+  notifyCardMoved: jest.fn().mockResolvedValue(undefined),
+}))
+
 // Mock github-utils
 const mockUpdateCardCompletion = jest.fn().mockResolvedValue(undefined)
 jest.mock('../lib/github-utils', () => ({
@@ -1238,6 +1252,34 @@ describe('API /api/cards/reorder', () => {
       expect(json.success).toBe(true)
     })
 
+    it('returns 401 when not authenticated', async () => {
+      denyAuth()
+      const req = makeReq('/api/cards/reorder', {
+        method: 'PUT',
+        body: { cards: [{ id: 'c1', position: 0, list_id: 'l1' }] },
+      })
+      const res = await cardsReorderPUT(req as unknown as Request)
+      expect(res.status).toBe(401)
+    })
+
+    it('detects cards moved to a different list and sends notifications', async () => {
+      authenticateUser()
+      // First from() returns current cards, subsequent calls are updates
+      setQueryResult([
+        { data: [{ id: 'c1', list_id: 'l1' }, { id: 'c2', list_id: 'l1' }], error: null }, // current cards
+        { data: null, error: null }, // update c1
+        { data: null, error: null }, // update c2
+      ])
+      const req = makeReq('/api/cards/reorder', {
+        method: 'PUT',
+        body: { cards: [{ id: 'c1', position: 0, list_id: 'l2' }, { id: 'c2', position: 1, list_id: 'l1' }] },
+      })
+      const res = await cardsReorderPUT(req as unknown as Request)
+      expect(res.status).toBe(200)
+      const json = await res.json()
+      expect(json.success).toBe(true)
+    })
+
     it('returns 500 on server error', async () => {
       authenticateUser()
       mockFrom.mockImplementation(() => { throw new Error('reorder error') })
@@ -1337,6 +1379,122 @@ describe('API /api/cards/upload', () => {
       expect(res.status).toBe(400)
       const json = await res.json()
       expect(json.error).toBe('File size must be less than 5MB')
+    })
+
+    it('uploads image successfully and returns URL', async () => {
+      authenticateUser()
+      mockStorageUpload.mockResolvedValue({ error: null })
+      // Sequential query results: existingImages, insert, card check, update card, allImages
+      setQueryResult([
+        { data: [{ position: 2 }], error: null },  // existing images
+        { data: null, error: null },                // insert
+        { data: { cover_image: null }, error: null }, // card with no cover
+        { data: null, error: null },                // update card cover
+        { data: [{ id: 'img-1', url: 'https://storage.example.com/test.png' }], error: null }, // allImages
+      ])
+      const req = makeReq('/api/cards/upload', { method: 'POST' }) as unknown as NextRequest & { _formDataStore: unknown }
+      req._formDataStore = {
+        get: (key: string) => {
+          if (key === 'file') return {
+            type: 'image/png',
+            size: 1024,
+            name: 'test.png',
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
+          }
+          if (key === 'cardId') return 'card-1'
+          return null
+        },
+      }
+      const res = await cardsUploadPOST(req as unknown as NextRequest)
+      expect(res.status).toBe(200)
+      const json = await res.json()
+      expect(json.url).toBeDefined()
+      expect(json.images).toBeDefined()
+    })
+
+    it('uploads image when card already has cover_image', async () => {
+      authenticateUser()
+      mockStorageUpload.mockResolvedValue({ error: null })
+      setQueryResult([
+        { data: [], error: null },                          // no existing images
+        { data: null, error: null },                        // insert
+        { data: { cover_image: 'existing.png' }, error: null }, // card already has cover
+        { data: [{ id: 'img-1', url: 'https://storage.example.com/test.png' }], error: null }, // allImages
+      ])
+      const req = makeReq('/api/cards/upload', { method: 'POST' }) as unknown as NextRequest & { _formDataStore: unknown }
+      req._formDataStore = {
+        get: (key: string) => {
+          if (key === 'file') return {
+            type: 'image/jpeg',
+            size: 2048,
+            name: 'photo.jpg',
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(2048)),
+          }
+          if (key === 'cardId') return 'card-2'
+          return null
+        },
+      }
+      const res = await cardsUploadPOST(req as unknown as NextRequest)
+      expect(res.status).toBe(200)
+    })
+
+    it('returns 500 when storage upload fails', async () => {
+      authenticateUser()
+      mockStorageUpload.mockResolvedValue({ error: { message: 'Storage full' } })
+      const req = makeReq('/api/cards/upload', { method: 'POST' }) as unknown as NextRequest & { _formDataStore: unknown }
+      req._formDataStore = {
+        get: (key: string) => {
+          if (key === 'file') return {
+            type: 'image/png',
+            size: 1024,
+            name: 'test.png',
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
+          }
+          if (key === 'cardId') return 'card-1'
+          return null
+        },
+      }
+      const res = await cardsUploadPOST(req as unknown as NextRequest)
+      expect(res.status).toBe(500)
+      const json = await res.json()
+      expect(json.error).toBe('Failed to upload image')
+    })
+
+    it('returns 500 when insert record fails', async () => {
+      authenticateUser()
+      mockStorageUpload.mockResolvedValue({ error: null })
+      setQueryResult([
+        { data: [], error: null },                              // existing images
+        { data: null, error: { message: 'insert failed' } },   // insert fails
+      ])
+      const req = makeReq('/api/cards/upload', { method: 'POST' }) as unknown as NextRequest & { _formDataStore: unknown }
+      req._formDataStore = {
+        get: (key: string) => {
+          if (key === 'file') return {
+            type: 'image/png',
+            size: 1024,
+            name: 'test.png',
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(1024)),
+          }
+          if (key === 'cardId') return 'card-1'
+          return null
+        },
+      }
+      const res = await cardsUploadPOST(req as unknown as NextRequest)
+      expect(res.status).toBe(500)
+      const json = await res.json()
+      expect(json.error).toBe('Failed to save image record')
+    })
+
+    it('returns 500 on unexpected exception', async () => {
+      authenticateUser()
+      // Make formData throw
+      const req = makeReq('/api/cards/upload', { method: 'POST' }) as unknown as NextRequest & { _formDataStore: unknown }
+      req._formDataStore = null
+      // Override formData to throw
+      ;(req as unknown as { formData: () => Promise<never> }).formData = () => Promise.reject(new Error('parse error'))
+      const res = await cardsUploadPOST(req as unknown as NextRequest)
+      expect(res.status).toBe(500)
     })
   })
 })
@@ -1509,6 +1667,102 @@ describe('API /api/invitations', () => {
       expect(res.status).toBe(201)
     })
 
+    it('returns 404 when board not found', async () => {
+      authenticateUser()
+      setQueryResult([
+        { data: null, error: { message: 'not found' } }, // board check fails
+      ])
+      const req = makeReq('/api/invitations', {
+        method: 'POST',
+        body: { board_id: 'b1', invitee_id: 'u2' },
+      })
+      const res = await invitationsPOST(req)
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 403 when user is not board owner', async () => {
+      authenticateUser()
+      setQueryResult([
+        { data: { owner_id: 'other-user' }, error: null }, // board owner is different
+      ])
+      const req = makeReq('/api/invitations', {
+        method: 'POST',
+        body: { board_id: 'b1', invitee_id: 'u2' },
+      })
+      const res = await invitationsPOST(req)
+      expect(res.status).toBe(403)
+      const json = await res.json()
+      expect(json.error).toBe('Only board owner can invite users')
+    })
+
+    it('returns 404 when invitee not found', async () => {
+      authenticateUser()
+      setQueryResult([
+        { data: { owner_id: MOCK_USER.id }, error: null },  // board
+        { data: null, error: null },                          // invitee not found
+      ])
+      const req = makeReq('/api/invitations', {
+        method: 'POST',
+        body: { board_id: 'b1', invitee_id: 'u2' },
+      })
+      const res = await invitationsPOST(req)
+      expect(res.status).toBe(404)
+      const json = await res.json()
+      expect(json.error).toContain('User not found')
+    })
+
+    it('returns 400 when user is already a member', async () => {
+      authenticateUser()
+      setQueryResult([
+        { data: { owner_id: MOCK_USER.id }, error: null },  // board
+        { data: { id: 'u2' }, error: null },                 // invitee exists
+        { data: { id: 'member-1' }, error: null },           // already member
+      ])
+      const req = makeReq('/api/invitations', {
+        method: 'POST',
+        body: { board_id: 'b1', invitee_id: 'u2' },
+      })
+      const res = await invitationsPOST(req)
+      expect(res.status).toBe(400)
+      const json = await res.json()
+      expect(json.error).toBe('User is already a member of this board')
+    })
+
+    it('returns 400 when a pending invitation already exists', async () => {
+      authenticateUser()
+      setQueryResult([
+        { data: { owner_id: MOCK_USER.id }, error: null },
+        { data: { id: 'u2' }, error: null },
+        { data: null, error: null },                          // not a member
+        { data: { id: 'inv-old', status: 'pending' }, error: null }, // pending invitation
+      ])
+      const req = makeReq('/api/invitations', {
+        method: 'POST',
+        body: { board_id: 'b1', invitee_id: 'u2' },
+      })
+      const res = await invitationsPOST(req)
+      expect(res.status).toBe(400)
+      const json = await res.json()
+      expect(json.error).toContain('already pending')
+    })
+
+    it('re-sends a declined invitation by updating to pending', async () => {
+      authenticateUser()
+      setQueryResult([
+        { data: { owner_id: MOCK_USER.id }, error: null },
+        { data: { id: 'u2' }, error: null },
+        { data: null, error: null },
+        { data: { id: 'inv-old', status: 'declined' }, error: null }, // declined invitation
+        { data: [{ id: 'inv-old', status: 'pending' }], error: null }, // update result
+      ])
+      const req = makeReq('/api/invitations', {
+        method: 'POST',
+        body: { board_id: 'b1', invitee_id: 'u2' },
+      })
+      const res = await invitationsPOST(req)
+      expect(res.status).toBe(200)
+    })
+
     it('returns 500 on server error', async () => {
       authenticateUser()
       setQueryResult([
@@ -1580,6 +1834,40 @@ describe('API /api/invitations/[id]', () => {
       expect(json.status).toBe('declined')
     })
 
+    it('returns 404 when invitation not found', async () => {
+      authenticateUser()
+      setQueryResult([
+        { data: null, error: { message: 'not found' } },
+      ])
+      const req = makeReq('/api/invitations/inv-1', { method: 'PUT', body: { action: 'accept' } })
+      const res = await invitationByIdPUT(req, params)
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 403 when user is not the invitee', async () => {
+      authenticateUser()
+      setQueryResult([
+        { data: { id: 'inv-1', invitee_id: 'other-user', board_id: 'b1', status: 'pending' }, error: null },
+      ])
+      const req = makeReq('/api/invitations/inv-1', { method: 'PUT', body: { action: 'accept' } })
+      const res = await invitationByIdPUT(req, params)
+      expect(res.status).toBe(403)
+      const json = await res.json()
+      expect(json.error).toContain('your own invitations')
+    })
+
+    it('returns 400 when invitation is not pending', async () => {
+      authenticateUser()
+      setQueryResult([
+        { data: { id: 'inv-1', invitee_id: MOCK_USER.id, board_id: 'b1', status: 'accepted' }, error: null },
+      ])
+      const req = makeReq('/api/invitations/inv-1', { method: 'PUT', body: { action: 'accept' } })
+      const res = await invitationByIdPUT(req, params)
+      expect(res.status).toBe(400)
+      const json = await res.json()
+      expect(json.error).toContain('already been responded')
+    })
+
     it('returns 500 on server error', async () => {
       authenticateUser()
       setQueryResult([
@@ -1611,6 +1899,39 @@ describe('API /api/invitations/[id]', () => {
       expect(res.status).toBe(200)
       const json = await res.json()
       expect(json.success).toBe(true)
+    })
+
+    it('returns 404 when invitation not found', async () => {
+      authenticateUser()
+      setQueryResult([
+        { data: null, error: { message: 'not found' } },
+      ])
+      const req = makeReq('/api/invitations/inv-1')
+      const res = await invitationByIdDELETE(req, params)
+      expect(res.status).toBe(404)
+    })
+
+    it('returns 403 when user is not owner or invitee', async () => {
+      authenticateUser()
+      setQueryResult([
+        { data: { id: 'inv-1', invitee_id: 'other-user', boards: { owner_id: 'another-user' } }, error: null },
+      ])
+      const req = makeReq('/api/invitations/inv-1')
+      const res = await invitationByIdDELETE(req, params)
+      expect(res.status).toBe(403)
+      const json = await res.json()
+      expect(json.error).toContain('permission')
+    })
+
+    it('allows board owner to delete invitation', async () => {
+      authenticateUser()
+      setQueryResult([
+        { data: { id: 'inv-1', invitee_id: 'other-user', boards: { owner_id: MOCK_USER.id } }, error: null },
+        { data: null, error: null },
+      ])
+      const req = makeReq('/api/invitations/inv-1')
+      const res = await invitationByIdDELETE(req, params)
+      expect(res.status).toBe(200)
     })
 
     it('returns 500 on server error', async () => {
@@ -2038,6 +2359,102 @@ describe('API /api/cards/[id]/sync-github', () => {
       })
       const res = await syncGithubPOST(req)
       expect(res.status).toBe(500)
+    })
+
+    it('updates GitHub issues when links are found', async () => {
+      authenticateUser()
+      mockGetSession.mockResolvedValue({ data: { session: { provider_token: 'gh-tok' } } })
+      setQueryResult([
+        {
+          data: [
+            { id: 'link-1', card_id: 'card-1', github_repo_owner: 'owner', github_repo_name: 'repo', github_number: 10, github_state: 'open' },
+          ],
+          error: null,
+        },
+        { data: null, error: null }, // update link state
+      ])
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ state: 'closed' }),
+      })
+      const req = makeReq('/api/cards/card-1/sync-github', {
+        method: 'POST',
+        body: { cardId: 'card-1', isCompleted: true },
+      })
+      const res = await syncGithubPOST(req)
+      expect(res.status).toBe(200)
+      const json = await res.json()
+      expect(json.success).toBe(true)
+      expect(json.updated).toBe(1)
+    })
+
+    it('skips issues already in the target state', async () => {
+      authenticateUser()
+      mockGetSession.mockResolvedValue({ data: { session: { provider_token: 'gh-tok' } } })
+      setQueryResult([
+        {
+          data: [
+            { id: 'link-1', card_id: 'card-1', github_repo_owner: 'owner', github_repo_name: 'repo', github_number: 10, github_state: 'closed' },
+          ],
+          error: null,
+        },
+      ])
+      const req = makeReq('/api/cards/card-1/sync-github', {
+        method: 'POST',
+        body: { cardId: 'card-1', isCompleted: true }, // wants closed, already closed
+      })
+      const res = await syncGithubPOST(req)
+      expect(res.status).toBe(200)
+      const json = await res.json()
+      expect(json.updated).toBe(0)
+    })
+
+    it('reports errors when GitHub API fails for some issues', async () => {
+      authenticateUser()
+      mockGetSession.mockResolvedValue({ data: { session: { provider_token: 'gh-tok' } } })
+      setQueryResult([
+        {
+          data: [
+            { id: 'link-1', card_id: 'card-1', github_repo_owner: 'owner', github_repo_name: 'repo', github_number: 10, github_state: 'open' },
+          ],
+          error: null,
+        },
+      ])
+      mockFetch.mockResolvedValue({
+        ok: false,
+        json: async () => ({ message: 'Not found' }),
+      })
+      const req = makeReq('/api/cards/card-1/sync-github', {
+        method: 'POST',
+        body: { cardId: 'card-1', isCompleted: true },
+      })
+      const res = await syncGithubPOST(req)
+      expect(res.status).toBe(200)
+      const json = await res.json()
+      expect(json.errors).toBeDefined()
+      expect(json.errors.length).toBeGreaterThan(0)
+    })
+
+    it('handles exception in the loop for a specific issue', async () => {
+      authenticateUser()
+      mockGetSession.mockResolvedValue({ data: { session: { provider_token: 'gh-tok' } } })
+      setQueryResult([
+        {
+          data: [
+            { id: 'link-1', card_id: 'card-1', github_repo_owner: 'owner', github_repo_name: 'repo', github_number: 10, github_state: 'open' },
+          ],
+          error: null,
+        },
+      ])
+      mockFetch.mockRejectedValue(new Error('Network failure'))
+      const req = makeReq('/api/cards/card-1/sync-github', {
+        method: 'POST',
+        body: { cardId: 'card-1', isCompleted: true },
+      })
+      const res = await syncGithubPOST(req)
+      expect(res.status).toBe(200)
+      const json = await res.json()
+      expect(json.errors).toBeDefined()
     })
   })
 })

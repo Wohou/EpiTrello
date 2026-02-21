@@ -17,9 +17,22 @@ jest.mock('../components/NotificationContext', () => ({
   useNotification: () => ({ confirm: mockConfirm, alert: mockAlert }),
 }))
 
-jest.mock('../lib/supabase-browser', () => ({
-  supabaseBrowser: {},
-}))
+jest.mock('../lib/supabase-browser', () => {
+  const channelObj = {
+    on: jest.fn().mockReturnThis(),
+    subscribe: jest.fn().mockReturnThis(),
+    unsubscribe: jest.fn().mockResolvedValue(undefined),
+  }
+  return {
+    supabaseBrowser: {
+      auth: {
+        getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user-1' } }, error: null }),
+      },
+      channel: jest.fn(() => channelObj),
+      removeChannel: jest.fn().mockResolvedValue(undefined),
+    },
+  }
+})
 
 jest.mock('next/image', () => ({
   __esModule: true,
@@ -45,6 +58,7 @@ const mockTranslations: Record<string, any> = {
     save: 'Save',
     edit: 'Edit',
     loading: 'Loading...',
+    send: 'Send',
   },
   cards: {
     deleteCard: 'Delete card',
