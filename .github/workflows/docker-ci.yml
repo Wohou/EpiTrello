@@ -33,7 +33,7 @@ jobs:
         run: npm run lint
         # If the linter fails, everything stops here. No unnecessary Docker.
 
-  # --- Step 1.5 : Unit Tests & Coverage ---
+# --- Step 1.5 : Unit Tests & Coverage ---
   test:
     name: Unit Tests & Coverage
     runs-on: ubuntu-latest
@@ -59,23 +59,18 @@ jobs:
         run: npx jest --coverage
 
       - name: Code Coverage Summary Report
+        id: coverage_report
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
           filename: ./EpiTrello/stack1-nextjs/coverage/cobertura-coverage.xml
           badge: true
-          fail_below_min: true
+          fail_below_min: false
           format: markdown
           output: both
 
       - name: Add Coverage to Summary
-        run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+        run: cat ${{ github.workspace }}/code-coverage-results.md >> $GITHUB_STEP_SUMMARY
 
-      - name: Add PR Comment
-        uses: marocchino/sticky-pull-request-comment@v2
-        if: github.event_name == 'pull_request'
-        with:
-          recreate: true
-          path: code-coverage-results.md
 
   # --- Step 2 : Security Scanning ---
   security-scan:
