@@ -28,7 +28,7 @@ const config: Config = {
     '!**/.next/**',
     '!**/vendor/**',
   ],
-  coverageReporters: ['text', 'text-summary', 'json-summary', 'lcov'],
+  coverageReporters: ['text', 'text-summary', 'json-summary', 'lcov', 'cobertura'],
 }
 
 export default createJestConfig(config)
