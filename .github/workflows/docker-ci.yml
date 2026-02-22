@@ -7,14 +7,13 @@ on:
     branches: [ main, develop ]
 
 jobs:
-  # Step 1 : Code Quality (Lint)
-  quality:
-    name: Code Quality (Lint)
+  # --- Step 0 : Install & Cache Dependencies ---
+  setup:
+    name: Install & Cache Dependencies
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./EpiTrello/stack1-nextjs
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,32 +27,52 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Upload node_modules
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-modules
+          path: ./EpiTrello/stack1-nextjs/node_modules
+          retention-days: 1
+
+  # --- Step 1 : Code Quality (Lint) ---
+  quality:
+    name: Code Quality (Lint)
+    needs: setup
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./EpiTrello/stack1-nextjs
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: node-modules
+          path: ./EpiTrello/stack1-nextjs/node_modules
 
       - name: Run ESLint
         run: npm run lint
-        # If the linter fails, everything stops here. No unnecessary Docker.
 
-# --- Step 1.5 : Unit Tests & Coverage ---
+  # --- Step 1.5 : Unit Tests & Coverage ---
   test:
     name: Unit Tests & Coverage
+    needs: setup
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./EpiTrello/stack1-nextjs
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
         with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: ./EpiTrello/stack1-nextjs/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
+          name: node-modules
+          path: ./EpiTrello/stack1-nextjs/node_modules
 
       - name: Run Jest Tests
         run: npx jest --coverage
@@ -71,29 +90,23 @@ jobs:
       - name: Add Coverage to Summary
         run: cat ${{ github.workspace }}/code-coverage-results.md >> $GITHUB_STEP_SUMMARY
 
-
   # --- Step 2 : Security Scanning ---
   security-scan:
     name: Security & Dependency Audit
-    needs: quality
+    needs: setup
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./EpiTrello/stack1-nextjs
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
         with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: ./EpiTrello/stack1-nextjs/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
+          name: node-modules
+          path: ./EpiTrello/stack1-nextjs/node_modules
 
       - name: Run npm audit
         run: npm audit --audit-level=high
@@ -116,7 +129,6 @@ jobs:
     defaults:
       run:
         working-directory: ./EpiTrello/stack1-nextjs
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -155,6 +167,7 @@ jobs:
           exit-code: '0'
 
       - name: Stop services
+        if: always()
         run: docker compose down
 
   # --- Step 4 : OWASP ZAP Penetration Testing ---
@@ -165,7 +178,6 @@ jobs:
     defaults:
       run:
         working-directory: ./EpiTrello/stack1-nextjs
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
