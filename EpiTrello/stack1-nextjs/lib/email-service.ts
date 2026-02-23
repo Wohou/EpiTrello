@@ -1,6 +1,8 @@
 import nodemailer from 'nodemailer'
 import { createClient } from '@supabase/supabase-js'
 
+/// Commentaire test CI
+
 // Gmail SMTP - simple à configurer
 const transporter = process.env.GMAIL_USER ? nodemailer.createTransport({
     service: 'gmail',
